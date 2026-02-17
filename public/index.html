@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mandar msg</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container">
+        <div id="row1">
+            <ul id="ul">
+
+            </ul>
+        </div>
+        <div class="d-flex align-items-center" id="row2">
+            <span class="border border-2"></span>
+            <input id="txt" class="form-control w-75" type="text" placeholder="write a message!">
+            <button class="btn btn-primary m-2" id="btn_send">enviar</button>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script>
+        const socket = io()
+        const ul = document.querySelector("#ul")
+        socket.on('message', (message) => {
+            let newmsg = document.createElement('p')
+            newmsg.textContent = message
+            ul.appendChild(newmsg)
+        })
+        const btn = document.querySelector("#btn_send")
+        btn.addEventListener('click', () => {
+            const txt = document.querySelector("#txt")
+            socket.emit('message', {msg: txt.value})
+            console.log('msg enviada')
+        })
+    </script>
+</body>
+</html>
