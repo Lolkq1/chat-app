@@ -21,17 +21,25 @@ const con = mysql.createConnection({
 })
 
 async function e() {
+    // let conn = await con
     app.use(express.json())
     app.use(cookie_parser())
     app.use(async (req, res, next) => {
      switch (req.url) {
         case '/index.html':
+        case '/':
             if (req.cookies.sessionToken) {
                 console.log('tem sessiontoken')
                 try {
                     let k = await jwt.verify(req.cookies.sessionToken, provisorio)
                     return next()
                 } catch(err) {
+                    res.cookie('sessionToken', 'a', {
+                        expires: true,
+                        maxAge: 1,
+                        httpOnly: true,
+                        sameSite: 'strict'
+                    })
                     break;
                 }
             }
@@ -51,87 +59,131 @@ async function e() {
      }
      return res.status(401).send('Não autorizado.')
 })
-    app.use(express.static(path.join(__dirname, 'public')))
 
-    app.post('/criar', async (req, res) => {
-        const {nome, email, senha} = req.body
-        if (nome.length > 30 || email.indexOf("@") === -1 || email.indexOf(".com") === -1) {
-            return res.status(422).send('nome de usuário ou e-mail inválidos.')
-        } else {
-            try {
-                let a = await con.query('SELECT * FROM usuarios WHERE email=?', [email])
-                if (a[0].length > 0) {
-                    return res.status(422).send('esse e-mail já pertence a uma conta.')
-                }
-            } catch {
-                return res.status(500).send('erro interno do servidor.')
-            }
-            try { 
-                await con.beginTransaction()
-                let senha2 = await bcrypt.hash(senha, 10)
-                await con.query('INSERT INTO usuarios (nome, email, senha) VALUES (?,?,?)', [nome, email, senha2])
-                await con.commit()
-                res.cookie('sessionToken', jwt.sign({
-                    email: email
-                }, provisorio), {
-                    maxAge:1000*60*60*24,
-                    httpOnly: true,
-                    sameSite: "strict"
-                })
-                res.send("Usuário criado com sucesso.")
-            } catch(err) {
-                console.log(err)
-                await con.rollback()
-                return res.status(500).send('erro interno do servidor.')
-            }
-        }
-    })
+app.use(express.static(path.join(__dirname, 'public')))
 
-    app.post('/login', async (req, res) => {
-        const {email, senha} = req.body
+app.post('/criar', async (req, res) => {
+    const {nome, email, senha} = req.body
+    if (nome.length > 50 || nome.length === 0 || email.indexOf("@") === -1 || email.indexOf(".") === -1) {
+        return res.status(422).send('nome de usuário ou e-mail inválidos.')
+    } else {
+        let conn = await con
         try {
-            let a = await con.query('SELECT * FROM usuarios WHERE email=?', [email])
-            if (a[0].length === 0) {
-                return res.status(422).send('usuário inexistente.')
-            } else {
-                let a2 = await bcrypt.compare(senha, a[0][0].senha)
-                if (a2) {
-                    res.cookie('sessionToken', jwt.sign({
-                    email: email
-                }, provisorio), {
-                    maxAge:1000*60*60*24,
-                    httpOnly: true,
-                    sameSite: "strict"
-                })
-                res.send('Acesso autorizado!')
-                } else {
-                    return res.status(401).send('senha incorreta.')
-                }
+            let a = await conn.query('SELECT * FROM usuarios WHERE email=?', [email])
+            if (a[0].length > 0) {
+                return res.status(422).send('esse e-mail já pertence a uma conta.')
             }
         } catch(err) {
+            console.log(err)
             return res.status(500).send('erro interno do servidor.')
         }
-    })
+        try { 
+            conn.beginTransaction()
+            let senha2 = await bcrypt.hash(senha, 10)
+            conn.query('INSERT INTO usuarios (nome, email, senha) VALUES (?,?,?)', [nome, email, senha2])
+            res.cookie('sessionToken', jwt.sign({
+                email: email
+            }, provisorio), {
+                maxAge:1000*60*60*24,
+                httpOnly: true,
+                sameSite: "strict"
+            })
+            conn.commit()
+            return res.send("Usuário criado com sucesso.")
+        } catch(err) {
+            console.log(err)
+            conn.rollback()
+        return res.status(500).send('erro interno do servidor.')
+        }
+    }
+})
 
-    app.post('/message', (req, res) => {
-        // quem enviou, quem recebeu ou o id da conversa (tem q ver ai)
-    })
+app.post('/login', async (req, res) => {
+    const {email, senha} = req.body
+    try {
+        let conn = await con
+        let a = await conn.query('SELECT * FROM usuarios WHERE email=?', [email])
+        if (a[0].length === 0) {
+            return res.status(422).send('usuário inexistente.')
+        } else {
+            let a2 = await bcrypt.compare(senha, a[0][0].senha)
+            if (a2) {
+                res.cookie('sessionToken', jwt.sign({
+                email: email
+            }, provisorio), {
+                maxAge:1000*60*60*24,
+                httpOnly: true,
+                sameSite: "strict"
+            })
+            return res.send('Acesso autorizado!')
+            } else {
+               return res.status(401).send('senha incorreta.')
+            }
+        }
+    } catch(err) {
+        return res.status(500).send('erro interno do servidor.')
+    }
+})
+
+app.post('/message', async (req, res) => {
+    let conn = await con
+    let e=false
+    // lembrete de verificar se o email associado à sessao socket.io é o mesmo de quem ta mandando msg pra evitar fraude de sessao
+    // lembrete de registrar as rooms do socket.io tbm p cada conversa, verificar se o cara ja ta na room e emitir. Tambem, em nova conexao de cada integrante, adicioná-lo
+    // às rooms as quais o id anterior
+    // estava conectado. verificar se a conversa ja existe, blablabla.
+    try {
+        // verificaçao blablabla
+        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+        e=true
+        await conn.beginTransaction()
+        conn.query('INSERT INTO mensagens VALUES (?,?)', [req.body.chat_token, req.body.msg]) // chat_token é varchar e message é text
+        let chats = await conn.query('SELECT * FROM chats WHERE chat_token=?', [req.body.chat_token])
+        let a = await conn.query('SELECT JSON_CONTAINS(?, ?) FROM chats AS t', [chats[0][0].participantes, JSON.stringify(k.email)]) // verificacao pra ver se o usuario q fez essa request ta na conversa
+        if (a[0][0].t === 1) {
+            await conn.commit()
+            return res.send('mensagem enviada com sucesso.')       
+        } else {
+            await conn.rollback()
+            return res.status(403).send('Não autorizado.')
+        }
+    } catch(err) {
+        if (e) {return res.status(401).send('Não autorizado.')} else {return res.status(500).send('Erro interno do servidor.')}
+    }
+})
+
+app.get('/chats', async (req, res) => {
+    try {
+        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+        let conn = await con
+        let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1", [JSON.stringify(k.email)]) // consertar isso daq
+        return res.send(a[0])
+    } catch(err) {
+        console.log(err)
+        return res.status(500).send('erro interno do servidor.')
+    }
+})
+
 
 io.on('connection', async (socket) => {
-    // try {
-    //     let a = await con.query('INSERT INTO chat_sessions (token, email)', [socket.id, ])
-    // } catch {
-
-    // }
     socket.on('message', (message) => {
         console.log(message)
         console.log(message.msg)
         io.emit('message', message.msg)
-
     })
 })
 
+app.post('/socket', async (req, res) => {
+    try {
+        let k = await jwt.verify(req.cookies.sessionToken)
+        let conn = await con
+        await conn.query('INSERT INTO sessoes_socket (token, email) VALUES (?,?)', [req.cookies.io, k.email])
+        return res.send('sessão socket.io registrada.')
+    } catch(err) {
+         return res.status(500).send('erro interno do servidor.')   
+    }
 
+})
 
 server.listen(8080, () => {
     console.log('servidor rodando na porta 8080')

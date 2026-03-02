@@ -9,32 +9,47 @@
 </head>
 <body>
     <div class="container">
-        <div id="row1">
-            <ul id="ul">
+        
+        <div id="chat">
+                <div id="row1">
+                <ul id="ul">
 
-            </ul>
-        </div>
-        <div class="d-flex align-items-center" id="row2">
-            <span class="border border-2"></span>
-            <input id="txt" class="form-control w-75" type="text" placeholder="write a message!">
-            <button class="btn btn-primary m-2" id="btn_send">enviar</button>
+                </ul>
+            </div>
+            <div class="d-flex align-items-center" id="row2">
+                <span class="border border-2"></span>
+                <input id="txt" class="form-control w-75" type="text" placeholder="write a message!">
+                <button class="btn btn-primary m-2" id="btn_send">enviar</button>
+            </div>
         </div>
     </div>
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script>
         const socket = io()
-        const ul = document.querySelector("#ul")
-        socket.on('message', (message) => {
-            let newmsg = document.createElement('p')
-            newmsg.textContent = message
-            ul.appendChild(newmsg)
-        })
-        const btn = document.querySelector("#btn_send")
-        btn.addEventListener('click', () => {
-            const txt = document.querySelector("#txt")
-            socket.emit('message', {msg: txt.value})
-            console.log('msg enviada')
-        })
+        let a1 = ''
+        try {
+        let a = await fetch('/socket', {
+            method: 'POST'
+        }) 
+        a1=a
+        } finally {
+            if (a1.ok) {
+                const ul = document.querySelector("#ul")
+            socket.on('message', (message) => {
+                let newmsg = document.createElement('p')
+                newmsg.textContent = message
+                ul.appendChild(newmsg)
+            })
+            const btn = document.querySelector("#btn_send")
+            btn.addEventListener('click', () => {
+                const txt = document.querySelector("#txt")
+                socket.emit('message', {msg: txt.value})
+                console.log('msg enviada')
+            })
+        }
+            alert('erro interno do servidor.')
+            document.location.reload()
+        }
     </script>
 </body>
 </html>
