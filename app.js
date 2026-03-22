@@ -13,15 +13,16 @@ const bcrypt = require('bcrypt')
 const cookie_parser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 let provisorio = 'mcqueenversustheflashquemganha'
-const con = mysql.createConnection({
+
+// CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL);
+async function e() {
+    // let conn = await con
+    const con = mysql.createConnection({
     user: process.env.USER,
     database: process.env.DATABASE,
     password: process.env.PASSWORD,
     port: 3306
-})
-
-async function e() {
-    // let conn = await con
+    })
     app.use(express.json())
     app.use(cookie_parser())
     app.use(async (req, res, next) => {
@@ -32,8 +33,14 @@ async function e() {
                 console.log('tem sessiontoken')
                 try {
                     let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+                    let conn = await con
+                    let a = await conn.query('SELECT * FROM usuarios WHERE id=? AND email=?', [k.id, k.email])
+                    if (a[0].length === 0) {
+                        return res.status(401).send('Usuário inexistente.')
+                    }
                     return next()
                 } catch(err) {
+                    console.log(err)
                     res.cookie('sessionToken', 'a', {
                         expires: true,
                         maxAge: 1,
@@ -62,9 +69,13 @@ async function e() {
 
 app.use(express.static(path.join(__dirname, 'public')))
 
+app.get('/perfil/:id', (req, res) => {
+    return res.sendFile(path.join(__dirname, 'public', 'perfil.html'))
+})
+
 app.post('/criar', async (req, res) => {
     const {nome, email, senha} = req.body
-    if (nome.length > 50 || nome.length === 0 || email.indexOf("@") === -1 || email.indexOf(".") === -1) {
+    if (nome.length > 30 || nome.length === 0 || email.indexOf("@") === -1 || email.indexOf(".") === -1) {
         return res.status(422).send('nome de usuário ou e-mail inválidos.')
     } else {
         let conn = await con
@@ -80,8 +91,10 @@ app.post('/criar', async (req, res) => {
         try { 
             conn.beginTransaction()
             let senha2 = await bcrypt.hash(senha, 10)
-            conn.query('INSERT INTO usuarios (nome, email, senha) VALUES (?,?,?)', [nome, email, senha2])
+            let a = await conn.query('INSERT INTO usuarios (nome, email, senha) VALUES (?,?,?)', [nome, email, senha2])
+            console.log(a)
             res.cookie('sessionToken', jwt.sign({
+                id: a[0].insertId,
                 email: email
             }, provisorio), {
                 maxAge:1000*60*60*24,
@@ -109,6 +122,7 @@ app.post('/login', async (req, res) => {
             let a2 = await bcrypt.compare(senha, a[0][0].senha)
             if (a2) {
                 res.cookie('sessionToken', jwt.sign({
+                id: a[0][0].id,
                 email: email
             }, provisorio), {
                 maxAge:1000*60*60*24,
@@ -139,7 +153,7 @@ app.post('/message', async (req, res) => {
         await conn.beginTransaction()
         conn.query('INSERT INTO mensagens VALUES (?,?)', [req.body.chat_token, req.body.msg]) // chat_token é varchar e message é text
         let chats = await conn.query('SELECT * FROM chats WHERE chat_token=?', [req.body.chat_token])
-        let a = await conn.query('SELECT JSON_CONTAINS(?, ?) FROM chats AS t', [chats[0][0].participantes, JSON.stringify(k.email)]) // verificacao pra ver se o usuario q fez essa request ta na conversa
+        let a = await conn.query('SELECT JSON_CONTAINS(?, ?) FROM chats AS t', [chats[0][0].participantes, JSON.stringify(k.id)]) // verificacao pra ver se o usuario q fez essa request ta na conversa
         if (a[0][0].t === 1) {
             await conn.commit()
             return res.send('mensagem enviada com sucesso.')       
@@ -156,7 +170,7 @@ app.get('/chats', async (req, res) => {
     try {
         let k = await jwt.verify(req.cookies.sessionToken, provisorio)
         let conn = await con
-        let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1", [JSON.stringify(k.email)]) // consertar isso daq
+        let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1", [JSON.stringify(k.id)]) // consertar isso daq (consertei eu acho)
         return res.send(a[0])
     } catch(err) {
         console.log(err)
@@ -183,6 +197,52 @@ app.post('/socket', async (req, res) => {
          return res.status(500).send('erro interno do servidor.')   
     }
 
+})
+
+
+
+app.get('/verificacao_ec', async (req, res) => {
+    let a = req.url.slice(parseInt(req.url.indexOf('id')))
+    let b = a.split('=')
+    let conn = await con
+    try {
+        let k = await jwt.verify(req.cookies.sessionToken, provisorio) // vou ter q me decidir se vai ser com email ou com id ou os 2 pra ficar salvo nos chat.
+        await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes, ?) = 1 AND JSON_CONTAINS(chats.participantes, ?) = 1 AND tipo="DM"', [k.id, b[1]])
+    } catch(err) {
+        return res.status(500).send('erro')
+    }
+})
+
+app.get('/pesquisa', async (req, res) => {
+    switch (req.query.chave) {
+        case 'id':
+            try {
+                let conn = await con
+                let a = await conn.query('SELECT nome, bio FROM usuarios WHERE id=?', [req.query.id])
+                console.log(a)
+                if (a[0].length === 0) {
+                    return res.status(404).send('usuario nao encontrado.')
+                }
+                return res.send(JSON.stringify(a[0][0]))
+            }
+            catch(err) {
+                console.log(err)
+                return res.status(500).send('erro interno do servidor.')
+            }
+        case 'nome':
+            try {
+                let conn = await con
+                console.log(req.query.nome)
+                console.log(req.query)
+                let a = await conn.query('SELECT nome, id FROM usuarios WHERE nome LIKE ?', [req.query.nome])
+                console.log(a, a[0])
+                return res.send(JSON.stringify(a[0]))
+            } catch(err) {
+                console.log(err)
+                return res.status(500).send('erro interno do servidor.')
+            }
+            
+    }
 })
 
 server.listen(8080, () => {

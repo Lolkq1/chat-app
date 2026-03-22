@@ -8,14 +8,35 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
 </head>
 <body>
-    <div class="container">
-        
-        <div id="chat">
-                <div id="row1">
-                <ul id="ul">
-
-                </ul>
+    <div class="container m-0 p-0 d-flex">
+        <div id="sidebar" class="container col-3 m-0">
+            <div class="card" style="width: 100%; height: 70px;">
+                <div class="card-body p-0" style="width: 100%; height: 100%;">
+                    <img src="pfp.png" alt="" class="card-image m-3" style="width: 40px; height: 40px; border-radius: 100%; box-shadow: 0 0 2px; display: inline;">
+                    <p class="card-text" style="display: inline;">pateta 1</p>
+                </div>
             </div>
+        </div>
+    <div class="container col-9 m-0" id="pesquisa">
+        <div id="main" class="h-100">
+            <div class="row mx-0 w-100" id="barra_pesquisa">
+                <input type="text" class="form-control w-50" id="pesquisa_txt">
+                <button class="btn btn-secondary" id="pesquisar">
+                    <img width="20px" height="20px" src="pesquisar.png" alt="">
+                </button>
+            </div>
+            <div class="row h-100 d-flex p-2" id="display_pesquisa">
+                <!-- <div class="card m-2" style="width: 300px; height: 125px; border: 1px solid black; border-radius: 5px; cursor: pointer;">
+                    <div class="card-body">
+                        <img src="pfp.png" alt="" class="card-image" style="border-radius: 100%; border: 1px solid black; width: 70px; height: 70px; display: inline; position: absolute; top: 50%; transform: translate(0, -50%);">
+                        <p class="card-text" style="display: inline; position: absolute; left: 70%; transform: translate(-70%, -50%); top: 50%;">abcdefghjabcdefghjabcdefghj</p> 
+                         preciso resolver pq maximo eh 30 caracteres e da problema visual 
+                    </div>
+                </div> -->
+            </div>
+        </div> 
+        <div id="chat" class=" w-100 h-100 d-none">
+            
             <div class="d-flex align-items-center" id="row2">
                 <span class="border border-2"></span>
                 <input id="txt" class="form-control w-75" type="text" placeholder="write a message!">
@@ -23,33 +44,104 @@
             </div>
         </div>
     </div>
+    </div>
+    
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script>
         const socket = io()
-        let a1 = ''
-        try {
-        let a = await fetch('/socket', {
-            method: 'POST'
-        }) 
-        a1=a
-        } finally {
-            if (a1.ok) {
-                const ul = document.querySelector("#ul")
-            socket.on('message', (message) => {
-                let newmsg = document.createElement('p')
-                newmsg.textContent = message
-                ul.appendChild(newmsg)
+        const tokens = []
+        const loadedChats = []
+        async function e() {
+            // só pra lembrar tem que salvar as sessao socket pra conseguir estabelecer conexao. senao nn da pra saber quem é quem. 
+            try {
+                const chats = await fetch('/chats')
+                const chatsdiv = document.querySelector("#chat")
+                for (x in chats) {
+                        const card = document.createElement('div')
+                        card.className = 'card'
+                        card.style = 'width: 100%; height: 70px;'
+                        const cbody = document.createElement('div')
+                        cbody.className = 'card-body p-0'
+                        cbody.style = 'width: 100%; height: 100%;'
+                        const img = document.createElement('img')
+                        img.src = 'pfp.png'
+                        img.style = 'width: 40px; height: 40px; border-radius: 100%; box-shadow: 0 0 2px; display: inline;'
+                        img.className = 'card-image m-3'
+                        const p = document.createElement('p')
+                        p.className = 'card-text'
+                        p.style = 'display: inline;'
+                        p.textContent = chats.nome
+                        card.id = chats.token // é pra nao ter q carregar dnv dps explico
+                        card.addEventListener('click', () => {
+                            for (x in chatsdiv) {
+                                if (chatsdiv[x].id === tokens[x]) {
+                                    
+                                } else {
+                                    chatsdiv[x].id === 2
+                                }
+                            }
+                        })
+                }
+            } catch {
+
+            }
+        } 
+
+
+        const btn_pesquisa = document.querySelector("#pesquisar")
+
+        btn_pesquisa.addEventListener('click', ()=>{
+            const pesquisa_txt = document.querySelector("#pesquisa_txt")
+            console.log(pesquisa_txt.value)
+            fetch(`/pesquisa?chave=nome&nome=${pesquisa_txt.value}`).then(res => {
+                if (res.ok) {
+                    res.text().then(obj2 => (JSON.parse(obj2))).then(obj => {
+                            console.log(obj)
+                            const disp = document.querySelector("#display_pesquisa")
+                            const antes = disp.querySelectorAll('div')
+                            for (x of antes) {
+                                x.remove()
+                            }
+                            if (obj.length === 0) {
+                                alert('Nenhum usuário encontrado!')
+                            } else {
+                                for (let x of obj) {
+                                    console.log('iae')
+                                    //  so fazer q nem da linha 24 ate a 30 valeeww so pra lembrar
+                                    //         <div class="card m-2" style="width: 300px; height: 125px; border: 1px solid black; border-radius: 5px; cursor: pointer;">
+                                    //     <div class="card-body">
+                                    //         <img src="pfp.png" alt="" class="card-image" style="border-radius: 100%; border: 1px solid black; width: 70px; height: 70px; display: inline; position: absolute; top: 50%; transform: translate(0, -50%);">
+                                    //         <p class="card-text" style="display: inline; position: absolute; left: 70%; transform: translate(-70%, -50%); top: 50%;">abcdefghjabcdefghjabcdefghj</p> 
+                                    //         <!-- preciso resolver pq maximo é 30 caracteres e da problema visual -->
+                                    //     </div>
+                                    // </div>
+                                    let card = document.createElement('div')
+                                    card.className = 'card m-2'
+                                    card.style = 'width: 300px; height: 125px; box-shadow: 0 0 3px black; border-radius: 5px; cursor: pointer;'
+                                    let cbody = document.createElement('div')
+                                    cbody.className = 'card-body'
+                                    let img = document.createElement('img')
+                                    img.src='pfp.png'
+                                    img.style = 'border-radius: 100%; box-shadow: 0 0 5px black; width: 70px; height: 70px; display: inline; position: absolute; top: 50%; transform: translate(0, -50%);'
+                                    img.className = 'card-image'
+                                    let r = document.createElement('a')
+                                    r.href = '/perfil/'+x.id
+                                    r.className = 'card-text'
+                                    r.textContent = x.nome
+                                    r.style = 'display: inline; position: absolute; left: 70%; transform: translate(-70%, -50%); top: 50%; color="black"; text-decoration: none'
+                                    disp.appendChild(card)
+                                    card.appendChild(cbody)
+                                    cbody.appendChild(img)
+                                    cbody.appendChild(r)
+
+                                }
+                            }
             })
-            const btn = document.querySelector("#btn_send")
-            btn.addEventListener('click', () => {
-                const txt = document.querySelector("#txt")
-                socket.emit('message', {msg: txt.value})
-                console.log('msg enviada')
-            })
-        }
-            alert('erro interno do servidor.')
-            document.location.reload()
-        }
+                } else {
+                    alert('erro interno do servidro')
+                }}
+            )
+        })
     </script>
 </body>
 </html>
