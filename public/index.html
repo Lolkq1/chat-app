@@ -36,8 +36,17 @@
             </div>
         </div> 
         <div id="chat" class=" w-100 h-100 d-none">
-            
-            <div class="d-flex align-items-center" id="row2">
+            <div id="token" class="w-100" style="height: 92%;">
+                <div class="m-2">
+                    <img src="pfp.png" alt="" style="height: 40px; width: 40px; display: inline; border-radius: 100%;">
+                    <p style="display: inline;" class="other">oi</p>
+                </div>
+                <div class="m-2">
+                        <p style="display: inline;" class="mine">oi</p>
+                    <img src="pfp.png" alt="" style="height: 40px; width: 40px; display: inline; border-radius: 100%;">
+                </div>
+            </div>
+            <div class="d-flex align-items-center" id="msg">
                 <span class="border border-2"></span>
                 <input id="txt" class="form-control w-75" type="text" placeholder="write a message!">
                 <button class="btn btn-primary m-2" id="btn_send">enviar</button>
@@ -51,41 +60,50 @@
         const socket = io()
         const tokens = []
         const loadedChats = []
-        async function e() {
+        const chatsdiv = document.querySelector("#chat")
+        const pesquisadiv = document.querySelector("#main")
+        const displaypesquisa = document.querySelector("#display_pesquisa")
+        const msg_div = document.querySelector("#msg")
+        // async function e() {
             // só pra lembrar tem que salvar as sessao socket pra conseguir estabelecer conexao. senao nn da pra saber quem é quem. 
-            try {
-                const chats = await fetch('/chats')
-                const chatsdiv = document.querySelector("#chat")
-                for (x in chats) {
-                        const card = document.createElement('div')
-                        card.className = 'card'
-                        card.style = 'width: 100%; height: 70px;'
-                        const cbody = document.createElement('div')
-                        cbody.className = 'card-body p-0'
-                        cbody.style = 'width: 100%; height: 100%;'
-                        const img = document.createElement('img')
-                        img.src = 'pfp.png'
-                        img.style = 'width: 40px; height: 40px; border-radius: 100%; box-shadow: 0 0 2px; display: inline;'
-                        img.className = 'card-image m-3'
-                        const p = document.createElement('p')
-                        p.className = 'card-text'
-                        p.style = 'display: inline;'
-                        p.textContent = chats.nome
-                        card.id = chats.token // é pra nao ter q carregar dnv dps explico
-                        card.addEventListener('click', () => {
-                            for (x in chatsdiv) {
-                                if (chatsdiv[x].id === tokens[x]) {
-                                    
-                                } else {
-                                    chatsdiv[x].id === 2
-                                }
-                            }
-                        })
-                }
-            } catch {
-
-            }
-        } 
+        //     try {
+        //         const chats = await fetch('/chats')
+        //         for (x in chats) {
+        //                 const card = document.createElement('div')
+        //                 card.className = 'card'
+        //                 card.style = 'width: 100%; height: 70px;'
+        //                 const cbody = document.createElement('div')
+        //                 cbody.className = 'card-body p-0'
+        //                 cbody.style = 'width: 100%; height: 100%;'
+        //                 const img = document.createElement('img')
+        //                 img.src = 'pfp.png'
+        //                 img.style = 'width: 40px; height: 40px; border-radius: 100%; box-shadow: 0 0 2px; display: inline;'
+        //                 img.className = 'card-image m-3'
+        //                 const p = document.createElement('p')
+        //                 p.className = 'card-text'
+        //                 p.style = 'display: inline;'
+        //                 p.textContent = chats[x].nome
+        //                 tokens.push(chats[x].token)
+        //                 card.id = chats[x].token
+        //                 card.addEventListener('click', () => {
+        //                     pesquisadiv.style.display = 'none'
+        //                     if (loadedChats.includes(tokens[x])) {
+        //                         for (y of chatsdiv) {
+        //                             if (y.id === tokens[x]) {
+        //                                 y.style.display = "block"
+        //                             } else if (y.id !== "msg") {
+        //                                 y.style.display = "none"
+        //                             }
+        //                         }
+        //                     } else {
+        //                         // processo de criaçao e carregamento das mensagens aqui
+        //                         
+        //                     }
+        //                 })
+        //         }
+        //     } catch {
+        //     }
+        // } 
 
 
         const btn_pesquisa = document.querySelector("#pesquisar")

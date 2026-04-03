@@ -67,11 +67,13 @@ async function e() {
      return res.status(401).send('Não autorizado.')
 })
 
-app.use(express.static(path.join(__dirname, 'public')))
-
 app.get('/perfil/:id', (req, res) => {
     return res.sendFile(path.join(__dirname, 'public', 'perfil.html'))
 })
+app.get('/perfil/public/:id', (req, res) => {
+    return res.sendFile(path.join(__dirname, 'public', req.params.id))
+})
+app.use(express.static(path.join(__dirname, 'public')))
 
 app.post('/criar', async (req, res) => {
     const {nome, email, senha} = req.body
