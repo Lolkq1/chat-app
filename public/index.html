@@ -58,14 +58,11 @@
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script>
         const socket = io()
-        const tokens = []
-        const loadedChats = []
         const chatsdiv = document.querySelector("#chat")
         const pesquisadiv = document.querySelector("#main")
         const displaypesquisa = document.querySelector("#display_pesquisa")
         const msg_div = document.querySelector("#msg")
         // async function e() {
-            // só pra lembrar tem que salvar as sessao socket pra conseguir estabelecer conexao. senao nn da pra saber quem é quem. 
         //     try {
         //         const chats = await fetch('/chats')
         //         for (x in chats) {
@@ -107,7 +104,6 @@
 
 
         const btn_pesquisa = document.querySelector("#pesquisar")
-
         btn_pesquisa.addEventListener('click', ()=>{
             const pesquisa_txt = document.querySelector("#pesquisa_txt")
             console.log(pesquisa_txt.value)

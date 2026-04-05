@@ -16,7 +16,7 @@
                 <div class="col-9">
                     <h1 id="username">nome de usuário</h1>
                     <p id="descricao">lorem ipsum dolor sit amet</p>
-                    <button class="btn btn-primary">Enviar mensagem</button>
+                    <button class="btn btn-primary" id="btn">Enviar mensagem</button>
                 </div>
             </div>
         </div>
@@ -36,8 +36,23 @@
                     nome.textContent = obj.nome
                     bio.textContent = obj.bio
                 })
+            } else {
+                alert('usuário inexistente!')
+                document.location.href = '/'
             }
         })
+
+            btn.addEventListener('click', () => {
+                fetch(`/verificacao_ec?id=${id}`).then(res => {
+                    if (res.ok) {
+                        console.log('eae2')
+                        JSON.parse(res).then(obj => document.location.href = `/chat/${obj}`)
+                    } else {
+                        console.log('eae')
+                        document.location.href = `/newchat/${id}`
+                    }
+                })
+            })
         }
 
     </script>

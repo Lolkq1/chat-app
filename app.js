@@ -141,6 +141,28 @@ app.post('/login', async (req, res) => {
     }
 })
 
+app.post('/newchat/:id', async (req, res) => {
+            let conn = await con
+    try {
+        // verificar de novo pq vai que so fez a request sem passar pela 1° verificaçao (se ja existe essa dm)
+        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+        let k2 = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?)', [JSON.stringify([k.id, req.params.id])])
+        if (k2[0].length > 0) {
+            return res.status(401).send('Não autorizado.') 
+        }
+        conn.beginTransaction()
+        let a = crypto.randomBytes(32)
+        let b = a.toString('hex')
+        await conn.query('INSERT INTO chats (token, participantes, tipo) VALUES(?,?,DM)', [b, JSON.stringify(([req.params.id, k.id]))])
+        await conn.commit()
+        return res.send('conversa iniciada com sucesso!')
+    } catch(err) {
+        console.log(err)
+        await conn.rollback()
+        return res.status(500).send('erro interno.')
+    }
+})
+
 app.post('/message', async (req, res) => {
     let conn = await con
     let e=false
@@ -153,9 +175,8 @@ app.post('/message', async (req, res) => {
         let k = await jwt.verify(req.cookies.sessionToken, provisorio)
         e=true
         await conn.beginTransaction()
-        conn.query('INSERT INTO mensagens VALUES (?,?)', [req.body.chat_token, req.body.msg]) // chat_token é varchar e message é text
-        let chats = await conn.query('SELECT * FROM chats WHERE chat_token=?', [req.body.chat_token])
-        let a = await conn.query('SELECT JSON_CONTAINS(?, ?) FROM chats AS t', [chats[0][0].participantes, JSON.stringify(k.id)]) // verificacao pra ver se o usuario q fez essa request ta na conversa
+        await conn.query('INSERT INTO mensagens VALUES (?,?)', [req.body.chat_token, req.body.msg]) // chat_token é varchar e message é text
+        let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) FROM chats AS t WHERE token=?', [JSON.stringify(k.id), req.body.chat_token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
         if (a[0][0].t === 1) {
             await conn.commit()
             return res.send('mensagem enviada com sucesso.')       
@@ -180,6 +201,33 @@ app.get('/chats', async (req, res) => {
     }
 })
 
+app.get('/newchat/:id', async (req, res) => {
+    return res.sendFile(path.join(__dirname, 'public', 'newchat.html'))
+})
+
+app.get('/chats2/:token', async (req, res) => {
+    try {
+        let conn = await con
+        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+        let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1 AND token=?', [JSON.stringify(k.id), req.params.token])
+        if (a[0].length === 0) {
+            return res.status(401).send('Usuário não participa do chat ou o chat não existe.')
+        } else {
+            return res.send('autorizado!')
+        }
+    } catch(err) {
+        console.log(err)
+        return res.status(500).send('erro intenro do servidor')
+    }
+})
+
+app.get('/chat/:token', (req, res) => {
+    return res.sendFile(path.join(__dirname, 'public', '/chat.html'))
+})
+
+app.get('/chat/public/:id', (req, res) => {
+    return res.sendFile(path.join(__dirname, 'public', req.params.id))
+})
 
 io.on('connection', async (socket) => {
     socket.on('message', (message) => {
@@ -204,13 +252,21 @@ app.post('/socket', async (req, res) => {
 
 
 app.get('/verificacao_ec', async (req, res) => {
-    let a = req.url.slice(parseInt(req.url.indexOf('id')))
-    let b = a.split('=')
     let conn = await con
     try {
-        let k = await jwt.verify(req.cookies.sessionToken, provisorio) // vou ter q me decidir se vai ser com email ou com id ou os 2 pra ficar salvo nos chat.
-        await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes, ?) = 1 AND JSON_CONTAINS(chats.participantes, ?) = 1 AND tipo="DM"', [k.id, b[1]])
+        let b = parseInt(req.query.id)
+        if (Number.isNaN(b)) {
+            return res.status(500).send('erro interno.')
+        }
+        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+        let a =await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes, ?) = 1 AND JSON_CONTAINS(chats.participantes, ?) = 1 AND tipo="DM"', [k.id, b])
+        if (a[0].length === 0) {
+            return res.status(401).send('Não autorizado.')
+        } else {
+            return res.send(a[0][0].token)
+        }
     } catch(err) {
+        console.log(err)
         return res.status(500).send('erro')
     }
 })
