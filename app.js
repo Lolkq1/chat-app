@@ -32,7 +32,7 @@ async function e() {
             if (req.cookies.sessionToken) {
                 console.log('tem sessiontoken')
                 try {
-                    let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+                    let k = jwt.verify(req.cookies.sessionToken, provisorio)
                     let conn = await con
                     let a = await conn.query('SELECT * FROM usuarios WHERE id=? AND email=?', [k.id, k.email])
                     if (a[0].length === 0) {
@@ -94,6 +94,7 @@ app.post('/criar', async (req, res) => {
             conn.beginTransaction()
             let senha2 = await bcrypt.hash(senha, 10)
             let a = await conn.query('INSERT INTO usuarios (nome, email, senha) VALUES (?,?,?)', [nome, email, senha2])
+            await conn.query('INSERT INTO sessoes_socket (usuario) VALUES (?)', [email]) // token de sesao pode ser nulo. (pq o usuario ainda nao se conectou)
             console.log(a)
             res.cookie('sessionToken', jwt.sign({
                 id: a[0].insertId,
@@ -142,20 +143,20 @@ app.post('/login', async (req, res) => {
 })
 
 app.post('/newchat/:id', async (req, res) => {
-            let conn = await con
+        let conn = await con
     try {
         // verificar de novo pq vai que so fez a request sem passar pela 1° verificaçao (se ja existe essa dm)
-        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
-        let k2 = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?)', [JSON.stringify([k.id, req.params.id])])
+        let k = jwt.verify(req.cookies.sessionToken, provisorio)
+        let k2 = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?,?) = 1', [JSON.stringify([k.id, req.params.id])])
         if (k2[0].length > 0) {
             return res.status(401).send('Não autorizado.') 
         }
         conn.beginTransaction()
         let a = crypto.randomBytes(32)
         let b = a.toString('hex')
-        await conn.query('INSERT INTO chats (token, participantes, tipo) VALUES(?,?,DM)', [b, JSON.stringify(([req.params.id, k.id]))])
+        await conn.query('INSERT INTO chats (token, participantes, tipo) VALUES(?,?,DM)', [b, JSON.stringify(([req.params.id])), JSON.stringify(k.id)])
         await conn.commit()
-        return res.send('conversa iniciada com sucesso!')
+        return res.send(b)
     } catch(err) {
         console.log(err)
         await conn.rollback()
@@ -163,35 +164,35 @@ app.post('/newchat/:id', async (req, res) => {
     }
 })
 
-app.post('/message', async (req, res) => {
+app.post('/message/:token', async (req, res) => {
     let conn = await con
     let e=false
+    let k = jwt.verify(req.cookies.sessionToken, provisorio)
     // lembrete de verificar se o email associado à sessao socket.io é o mesmo de quem ta mandando msg pra evitar fraude de sessao
     // lembrete de registrar as rooms do socket.io tbm p cada conversa, verificar se o cara ja ta na room e emitir. Tambem, em nova conexao de cada integrante, adicioná-lo
     // às rooms as quais o id anterior
     // estava conectado. verificar se a conversa ja existe, blablabla.
-    try {
-        // verificaçao blablabla
-        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
-        e=true
-        await conn.beginTransaction()
-        await conn.query('INSERT INTO mensagens VALUES (?,?)', [req.body.chat_token, req.body.msg]) // chat_token é varchar e message é text
-        let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) FROM chats AS t WHERE token=?', [JSON.stringify(k.id), req.body.chat_token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
-        if (a[0][0].t === 1) {
-            await conn.commit()
-            return res.send('mensagem enviada com sucesso.')       
-        } else {
-            await conn.rollback()
-            return res.status(403).send('Não autorizado.')
-        }
-    } catch(err) {
-        if (e) {return res.status(401).send('Não autorizado.')} else {return res.status(500).send('Erro interno do servidor.')}
-    }
+            try {
+                e=true
+                await conn.beginTransaction()
+                await conn.query('INSERT INTO mensagens (chat_token, message) VALUES (?,?)', [req.body.chat_token, req.body.msg]) // chat_token é varchar e message é text
+                let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) FROM chats AS t WHERE token=?', [JSON.stringify(k.id), req.body.chat_token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
+                if (a[0][0].t === 1) {
+                    await conn.commit()
+                    return res.send('mensagem enviada com sucesso.')       
+                } else {
+                    await conn.rollback()
+                    return res.status(403).send('Não autorizado.')
+                }
+            } catch(err) {
+                if (e) {return res.status(401).send('Não autorizado.')} else {return res.status(500).send('Erro interno do servidor.')}
+            }
+    
 })
 
 app.get('/chats', async (req, res) => {
     try {
-        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+        let k = jwt.verify(req.cookies.sessionToken, provisorio)
         let conn = await con
         let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1", [JSON.stringify(k.id)]) // consertar isso daq (consertei eu acho)
         return res.send(a[0])
@@ -208,7 +209,7 @@ app.get('/newchat/:id', async (req, res) => {
 app.get('/chats2/:token', async (req, res) => {
     try {
         let conn = await con
-        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
+        let k = jwt.verify(req.cookies.sessionToken, provisorio)
         let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1 AND token=?', [JSON.stringify(k.id), req.params.token])
         if (a[0].length === 0) {
             return res.status(401).send('Usuário não participa do chat ou o chat não existe.')
@@ -231,23 +232,29 @@ app.get('/chat/public/:id', (req, res) => {
 
 io.on('connection', async (socket) => {
     socket.on('message', (message) => {
+        //receber .msg e .room onde .room é o token
         console.log(message)
         console.log(message.msg)
-        io.emit('message', message.msg)
+        io.to(message.room).emit('message', message.msg)
+    })
+    socket.on('novo', (salas) => {
+        socket.join(salas)
     })
 })
 
-app.post('/socket', async (req, res) => {
+app.patch('/socket', async (req, res) => {
     try {
-        let k = await jwt.verify(req.cookies.sessionToken)
+        let k = jwt.verify(req.cookies.sessionToken)
         let conn = await con
-        await conn.query('INSERT INTO sessoes_socket (token, email) VALUES (?,?)', [req.cookies.io, k.email])
-        return res.send('sessão socket.io registrada.')
+        await conn.query('UPDATE sessoes_socket SET token=? WHERE email=?', [req.cookies.io, k.email])
+        let a = await conn.query('SELECT chat_token FROM chats AS token WHERE JSON_CONTAINS(participantes, ?) = 1', [JSON.stringify(k.id)])
+        return res.send(a[0]) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
     } catch(err) {
          return res.status(500).send('erro interno do servidor.')   
     }
 
-})
+}) // isso aqui é muito imprático e em larga escala horrivel mas como ainda nao sei react pra fazer SPA (unica soluçao viavel
+// que eu achei pq as outras nao entendi direito) pra n ter que mudar o .io toda hora vai assim por enquanto
 
 
 
@@ -258,8 +265,8 @@ app.get('/verificacao_ec', async (req, res) => {
         if (Number.isNaN(b)) {
             return res.status(500).send('erro interno.')
         }
-        let k = await jwt.verify(req.cookies.sessionToken, provisorio)
-        let a =await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes, ?) = 1 AND JSON_CONTAINS(chats.participantes, ?) = 1 AND tipo="DM"', [k.id, b])
+        let k = jwt.verify(req.cookies.sessionToken, provisorio)
+        let a =await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1 AND tipo="DM"', [JSON.stringify(k.id, b)])
         if (a[0].length === 0) {
             return res.status(401).send('Não autorizado.')
         } else {
