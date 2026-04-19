@@ -46,7 +46,7 @@
                 fetch(`/verificacao_ec?id=${id}`).then(res => {
                     if (res.ok) {
                         console.log('eae2')
-                        JSON.parse(res).then(obj => document.location.href = `/chat/${obj}`)
+                        res.text().then(obj => document.location.href = `/chat/${obj}`)
                     } else {
                         console.log('eae')
                         document.location.href = `/newchat/${id}`

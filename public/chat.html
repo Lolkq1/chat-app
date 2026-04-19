@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="/chat/public/style.css">
-    <script src="/chat/public/script4.js" defer></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
 </head>
 <body>
@@ -57,5 +56,108 @@
         </div>
     </div>
     </div>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script>
+        const socket = io()
+        fetch('/socket', {
+            method: 'PATCH'
+        }).then(res => {
+            if (res.ok) {
+                res.text().then(obj => {socket.emit('novo', obj)})
+            } else {
+                alert('erro: socket')
+                document.location.href = '/'
+            }
+            })
+        const a = document.location.toString().indexOf('chat/')+5
+        const b = document.location.toString().slice(a)
+        const btn = document.querySelector("#btn_send")
+        const txt = document.querySelector("#txt")
+        fetch(`/chats2/${b}`).then(res => {
+            if (res.ok) {
+                fetch(`/historico/${b}`).then(res => {
+                    if (res.ok) {
+                        res.text().then(res2 => JSON.parse(res2)).then(obj => {
+                                for (x of obj) {
+                                console.log(x.msg)
+                                console.log(x.remetente)
+                                console.log(x.eu)
+                                if(x.eu === true) {
+                                    let a3 = document.createElement("img")
+                                    let b3 = document.createElement("p")
+                                    let c3 = document.createElement("div")
+                                    let e = document.createElement("div")
+                                    let d = document.querySelector('#token')
+                                    e.className = 'px-5 py-1 w-100'  
+                                    e.appendChild(b3)
+                                    c3.className = 'm-2'
+                                    a3.style = 'height: 40px; width: 40px; display: inline; border-radius: 100%; position: relative; left: 100%; transform:translate(-100%,0)'
+                                    a3.src = '/chat/public/pfp.png'
+                                    b3.textContent = x.msg
+                                    b3.style.display = 'inline'
+                                    c3.appendChild(a3)
+                                    c3.appendChild(e)
+                                    d.appendChild(c3)
+                                } else {
+                                    let a3 = document.createElement("img")
+                                    let b3 = document.createElement("p")
+                                    let c3 = document.createElement("div")
+                                    let e = document.createElement("div")
+                                    let d = document.querySelector('#token')
+                                    e.className = 'px-5 py-1 w-100'
+                                    e.appendChild(b3)
+                                    c3.className = 'm-2'
+                                    a3.style = 'height: 40px; width: 40px; display: inline; border-radius: 100%;'
+                                    a3.src = '/chat/public/pfp.png'
+                                    b3.textContent = x.msg
+                                    b3.style.display = 'inline'
+                                    c3.appendChild(a3)
+                                    c3.appendChild(e)
+                                    d.appendChild(c3)
+                                }
+                                
+                            }
+                            })
+                            
+                        
+                    }
+                })
+                btn.addEventListener("click", () => {
+                    if (txt.value && txt.value.length > 0) {
+                        fetch(`/mensagem/${b}`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            chat_token: b,
+                            msg: txt.value
+                        }),
+                        headers: {"content-type": "application/json"}
+                    }).then(res => {
+                        if (res.ok) {
+                            res.text().then(text => {
+                                socket.emit('mensagem', {msg: text.value, room: b})
+                            })
+                            
+                            // processo de carregamento visual
+                        } else {
+                            alert('nao foi possível enviar a mensagem.')
+                        }
+                    })
+                    }
+                })
+                socket.on('mensagem', (mensagem) => {
+                    if (mensagem.room === b) {
+                        // processo de carregamento visual da msg
+
+                    } else {
+                        // processo de carregar notificaçao da msg visualmente.
+                    }
+   
+                })
+            } else {
+                alert('a conversa não existe ou você não participa dela.')
+                document.location.href = '/'
+            }
+        })
+    </script>
 </body>
 </html>

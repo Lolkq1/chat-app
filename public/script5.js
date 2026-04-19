@@ -5,21 +5,25 @@ let b2 = document.location.toString().slice(a+9)
 btn_enviar.addEventListener('click', () => {
     const txt = document.querySelector("#txt")
     if (txt.value && txt.value.length > 0) {
-        fetch(b).then(res => {
+        fetch(b, {
+            method: 'PUT'
+        }).then(res => {
             if (res.ok) {
                 res.text().then(obj => {
-                    fetch(`/message/${b2}`, {
+                    fetch(`/mensagem/${obj}`, {
                         method: 'POST',
                         body: JSON.stringify({
-                            msg: msg.value
+                            msg: txt.value
                         }),
-                        "content-type": "application/json"
-                    }).then(res => {
-                        if (res.ok) {
-                            
+                        headers: {"content-type": "application/json"}
+                    }).then(res2 => {
+                        if (res2.ok) {
+                            document.location.href = `localhost:8080/chat/${obj}`
                         }
                     })
                 })
+            } else {
+                alert('não foi possível criar novo chat.')
             }
         })
     }

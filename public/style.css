@@ -22,3 +22,7 @@ body {
 .container {
     height: 100vh;
 }
+
+#token {
+    overflow-wrap: break-word;
+}

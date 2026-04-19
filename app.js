@@ -12,6 +12,7 @@ const io = new Server(server, {
 const bcrypt = require('bcrypt')
 const cookie_parser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
+const nanoid = require('nanoid')
 let provisorio = 'mcqueenversustheflashquemganha'
 
 // CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL);
@@ -36,7 +37,7 @@ async function e() {
                     let conn = await con
                     let a = await conn.query('SELECT * FROM usuarios WHERE id=? AND email=?', [k.id, k.email])
                     if (a[0].length === 0) {
-                        return res.status(401).send('Usuário inexistente.')
+                        return res.status(404).send('Usuário inexistente.')
                     }
                     return next()
                 } catch(err) {
@@ -78,7 +79,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 app.post('/criar', async (req, res) => {
     const {nome, email, senha} = req.body
     if (nome.length > 30 || nome.length === 0 || email.indexOf("@") === -1 || email.indexOf(".") === -1) {
-        return res.status(422).send('nome de usuário ou e-mail inválidos.')
+        return res.status(400).send('nome de usuário ou e-mail inválidos.')
     } else {
         let conn = await con
         try {
@@ -94,7 +95,7 @@ app.post('/criar', async (req, res) => {
             conn.beginTransaction()
             let senha2 = await bcrypt.hash(senha, 10)
             let a = await conn.query('INSERT INTO usuarios (nome, email, senha) VALUES (?,?,?)', [nome, email, senha2])
-            await conn.query('INSERT INTO sessoes_socket (usuario) VALUES (?)', [email]) // token de sesao pode ser nulo. (pq o usuario ainda nao se conectou)
+            await conn.query('INSERT INTO sessoes_socket (id) VALUES (?)', [a[0].insertId]) // token de sesao pode ser nulo. (pq o usuario ainda nao se conectou)
             console.log(a)
             res.cookie('sessionToken', jwt.sign({
                 id: a[0].insertId,
@@ -119,6 +120,7 @@ app.post('/login', async (req, res) => {
     try {
         let conn = await con
         let a = await conn.query('SELECT * FROM usuarios WHERE email=?', [email])
+        console.log(1)
         if (a[0].length === 0) {
             return res.status(422).send('usuário inexistente.')
         } else {
@@ -138,25 +140,31 @@ app.post('/login', async (req, res) => {
             }
         }
     } catch(err) {
+        console.log(err)
         return res.status(500).send('erro interno do servidor.')
     }
 })
 
-app.post('/newchat/:id', async (req, res) => {
+app.put('/newchat/:id', async (req, res) => {
         let conn = await con
     try {
         // verificar de novo pq vai que so fez a request sem passar pela 1° verificaçao (se ja existe essa dm)
         let k = jwt.verify(req.cookies.sessionToken, provisorio)
-        let k2 = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?,?) = 1', [JSON.stringify([k.id, req.params.id])])
+        if (k.id == req.params.id) {
+            return res.status(400).send('não é possível criar um chat consigo mesmo.')
+        }
+        let k2 = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes,?) = 1', [JSON.stringify(k.id), JSON.stringify(parseInt(req.params.id))])
+        console.log(k2[0])
+        console.log('aq nao 1')
         if (k2[0].length > 0) {
-            return res.status(401).send('Não autorizado.') 
+            return res.status(403).send('Não autorizado.') 
         }
         conn.beginTransaction()
-        let a = crypto.randomBytes(32)
-        let b = a.toString('hex')
-        await conn.query('INSERT INTO chats (token, participantes, tipo) VALUES(?,?,DM)', [b, JSON.stringify(([req.params.id])), JSON.stringify(k.id)])
+        let a = nanoid.nanoid()
+        await conn.query('INSERT INTO chats (token, participantes, tipo) VALUES (?,?,"DM")', [a, JSON.stringify([parseInt(req.params.id), k.id])])
+        console.log('aq nao 2')
         await conn.commit()
-        return res.send(b)
+        return res.send(a)
     } catch(err) {
         console.log(err)
         await conn.rollback()
@@ -164,27 +172,26 @@ app.post('/newchat/:id', async (req, res) => {
     }
 })
 
-app.post('/message/:token', async (req, res) => {
+app.post('/mensagem/:token', async (req, res) => {
     let conn = await con
+    console.log(req.params.token)
+    console.log('ola')
     let e=false
     let k = jwt.verify(req.cookies.sessionToken, provisorio)
-    // lembrete de verificar se o email associado à sessao socket.io é o mesmo de quem ta mandando msg pra evitar fraude de sessao
-    // lembrete de registrar as rooms do socket.io tbm p cada conversa, verificar se o cara ja ta na room e emitir. Tambem, em nova conexao de cada integrante, adicioná-lo
-    // às rooms as quais o id anterior
-    // estava conectado. verificar se a conversa ja existe, blablabla.
             try {
                 e=true
                 await conn.beginTransaction()
-                await conn.query('INSERT INTO mensagens (chat_token, message) VALUES (?,?)', [req.body.chat_token, req.body.msg]) // chat_token é varchar e message é text
-                let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) FROM chats AS t WHERE token=?', [JSON.stringify(k.id), req.body.chat_token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
+                await conn.query('INSERT INTO mensagens (chat_token, msg, remetente, hora) VALUES (?,?,?, NOW())', [req.params.token, req.body.msg, k.id]) // chat_token é varchar e msg é text
+                let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) AS t FROM chats WHERE token=?', [JSON.stringify(k.id), req.params.token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
                 if (a[0][0].t === 1) {
                     await conn.commit()
                     return res.send('mensagem enviada com sucesso.')       
                 } else {
-                    await conn.rollback()
+                    await conn.rollback()  
                     return res.status(403).send('Não autorizado.')
                 }
             } catch(err) {
+                console.log(err)
                 if (e) {return res.status(401).send('Não autorizado.')} else {return res.status(500).send('Erro interno do servidor.')}
             }
     
@@ -212,7 +219,7 @@ app.get('/chats2/:token', async (req, res) => {
         let k = jwt.verify(req.cookies.sessionToken, provisorio)
         let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1 AND token=?', [JSON.stringify(k.id), req.params.token])
         if (a[0].length === 0) {
-            return res.status(401).send('Usuário não participa do chat ou o chat não existe.')
+            return res.status(403).send('Usuário não participa do chat ou o chat não existe.')
         } else {
             return res.send('autorizado!')
         }
@@ -221,6 +228,8 @@ app.get('/chats2/:token', async (req, res) => {
         return res.status(500).send('erro intenro do servidor')
     }
 })
+
+// so pra lembrar: chats2 pega um chat especifico e verifica se o user ta. chats pega todos os que o user ta. da pra juntar os 2 mas dx pra dps
 
 app.get('/chat/:token', (req, res) => {
     return res.sendFile(path.join(__dirname, 'public', '/chat.html'))
@@ -231,11 +240,9 @@ app.get('/chat/public/:id', (req, res) => {
 })
 
 io.on('connection', async (socket) => {
-    socket.on('message', (message) => {
+    socket.on('mensagem', (mensagem) => {
         //receber .msg e .room onde .room é o token
-        console.log(message)
-        console.log(message.msg)
-        io.to(message.room).emit('message', message.msg)
+        io.to(mensagem.room).emit('mensagem', mensagem.msg)
     })
     socket.on('novo', (salas) => {
         socket.join(salas)
@@ -244,12 +251,14 @@ io.on('connection', async (socket) => {
 
 app.patch('/socket', async (req, res) => {
     try {
-        let k = jwt.verify(req.cookies.sessionToken)
+        let k = jwt.verify(req.cookies.sessionToken, provisorio)
         let conn = await con
-        await conn.query('UPDATE sessoes_socket SET token=? WHERE email=?', [req.cookies.io, k.email])
-        let a = await conn.query('SELECT chat_token FROM chats AS token WHERE JSON_CONTAINS(participantes, ?) = 1', [JSON.stringify(k.id)])
+        await conn.query('UPDATE sessoes_socket SET token=? WHERE id=?', [req.cookies.io, k.id])
+        console.log(1)
+        let a = await conn.query('SELECT token FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1', [JSON.stringify(k.id)])
         return res.send(a[0]) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
     } catch(err) {
+        console.log(err)
          return res.status(500).send('erro interno do servidor.')   
     }
 
@@ -266,9 +275,9 @@ app.get('/verificacao_ec', async (req, res) => {
             return res.status(500).send('erro interno.')
         }
         let k = jwt.verify(req.cookies.sessionToken, provisorio)
-        let a =await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1 AND tipo="DM"', [JSON.stringify(k.id, b)])
+        let a =await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes, ?) AND tipo="DM"', [JSON.stringify(parseInt(k.id)), JSON.stringify(parseInt(b))])
         if (a[0].length === 0) {
-            return res.status(401).send('Não autorizado.')
+            return res.status(403).send('Não autorizado.')
         } else {
             return res.send(a[0][0].token)
         }
@@ -308,6 +317,22 @@ app.get('/pesquisa', async (req, res) => {
             }
             
     }
+})
+
+app.get('/historico/:token', async(req, res) => {
+    let conn = await con
+    let k = jwt.verify(req.cookies.sessionToken, provisorio)
+    let c = await conn.query('SELECT msg, remetente, hora FROM mensagens WHERE chat_token=? ORDER BY hora', [req.params.token])
+    console.log(c[0])
+    for (x of c[0]) {
+        if (x.remetente === k.id) {
+            x.eu = true
+        } else {
+            x.eu = false
+        }
+    }
+    console.log(c[0][0])
+    return res.send(JSON.stringify(c[0]))
 })
 
 server.listen(8080, () => {
