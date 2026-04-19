@@ -18,7 +18,7 @@ btn_enviar.addEventListener('click', () => {
                         headers: {"content-type": "application/json"}
                     }).then(res2 => {
                         if (res2.ok) {
-                            document.location.href = `localhost:8080/chat/${obj}`
+                            document.location.href = `/chat/${obj}`
                         }
                     })
                 })

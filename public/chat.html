@@ -37,15 +37,12 @@
                       <img src="https://www.svgrepo.com/show/18507/back-button.svg" style="height: 40px; width: 40px; margin-right: 10px;" alt="">
                     </a>
                     <img src="/chat/public/pfp.png" alt="" style="height: 40px; width: 40px; display: inline; border-radius: 100%;">
-                    <p style="display: inline;" class="other">eae</p>
+                    <p style="display: inline;" class="other" id="quem">eae</p>
                 </div>
                 
             </div>
             <div id="token" class="w-100" style="height: 86%;">
-                <div class="m-2">
-                    <img src="/chat/public/pfp.png" alt="" style="height: 40px; width: 40px; display: inline; border-radius: 100%;">
-                    <p style="display: inline;" class="other">lorem ipsum dolor sit amet</p>
-                </div>
+                
                 
             </div>
             <div class="d-flex align-items-center" id="msg">
@@ -73,6 +70,7 @@
         const b = document.location.toString().slice(a)
         const btn = document.querySelector("#btn_send")
         const txt = document.querySelector("#txt")
+        const quem = document.querySelector("#quem")
         fetch(`/chats2/${b}`).then(res => {
             if (res.ok) {
                 fetch(`/historico/${b}`).then(res => {
@@ -88,10 +86,11 @@
                                     let c3 = document.createElement("div")
                                     let e = document.createElement("div")
                                     let d = document.querySelector('#token')
-                                    e.className = 'px-5 py-1 w-100'  
+                                    e.className = 'px-5 py-1 w-100'
+                                    e.style = 'text-align: right;'
                                     e.appendChild(b3)
                                     c3.className = 'm-2'
-                                    a3.style = 'height: 40px; width: 40px; display: inline; border-radius: 100%; position: relative; left: 100%; transform:translate(-100%,0)'
+                                    a3.style = 'height: 40px; width: 40px; display: inline; border-radius: 100%; position: relative; left: 100%; transform:translate(-100%,0);'
                                     a3.src = '/chat/public/pfp.png'
                                     b3.textContent = x.msg
                                     b3.style.display = 'inline'
@@ -134,10 +133,25 @@
                     }).then(res => {
                         if (res.ok) {
                             res.text().then(text => {
-                                socket.emit('mensagem', {msg: text.value, room: b})
+                                socket.emit('mensagem', {msg: text, room: b})
+                                    let a3 = document.createElement("img")
+                                    let b3 = document.createElement("p")
+                                    let c3 = document.createElement("div")
+                                    let e = document.createElement("div")
+                                    let d = document.querySelector('#token')
+                                    e.className = 'px-5 py-1 w-100'
+                                    e.style = 'text-align: right;'
+                                    e.appendChild(b3)
+                                    c3.className = 'm-2'
+                                    a3.style = 'height: 40px; width: 40px; display: inline; border-radius: 100%; position: relative; left: 100%; transform:translate(-100%,0);'
+                                    a3.src = '/chat/public/pfp.png'
+                                    b3.textContent = text
+                                    b3.style.display = 'inline'
+                                    c3.appendChild(a3)
+                                    c3.appendChild(e)
+                                    d.appendChild(c3)
                             })
                             
-                            // processo de carregamento visual
                         } else {
                             alert('nao foi possível enviar a mensagem.')
                         }

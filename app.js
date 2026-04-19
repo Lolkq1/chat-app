@@ -191,7 +191,7 @@ app.post('/mensagem/:token', async (req, res) => {
                 let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) AS t FROM chats WHERE token=?', [JSON.stringify(k.id), req.params.token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
                 if (a[0][0].t === 1) {
                     await conn.commit()
-                    return res.send('mensagem enviada com sucesso.')       
+                    return res.send(req.body.msg)       
                 } else {
                     await conn.rollback()  
                     return res.status(403).send('Não autorizado.')
@@ -205,9 +205,32 @@ app.post('/mensagem/:token', async (req, res) => {
 
 app.get('/chats', async (req, res) => {
     try {
+        console.log('iae')
         let k = jwt.verify(req.cookies.sessionToken, provisorio)
         let conn = await con
-        let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1", [JSON.stringify(k.id)]) // consertar isso daq (consertei eu acho)
+        let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1", [JSON.stringify(k.id)])
+        for (x of a[0]) {
+            console.log('oi')
+            if (x.tipo === 'DM') {
+                console.log('the t')
+                let f = async (x, n) => {
+                    let c = await conn.query('SELECT nome FROM usuarios WHERE id=?', [x.participantes[n]])
+                    console.log(c[0][0].nome)
+                    x.nome = c[0][0].nome 
+                }
+                switch (x.participantes[0] === k.id) {
+                    case true:
+                        await f(x, 1)
+                        console.log('nsei')
+                        break;
+                    case false:
+                        await f(x,0)
+                        console.log('thau')
+                        break;
+                }
+                // piores linhas de codigos que eu ja fiz na vida refatorar dps
+            }
+        }
         return res.send(a[0])
     } catch(err) {
         console.log(err)
@@ -224,10 +247,13 @@ app.get('/chats2/:token', async (req, res) => {
         let conn = await con
         let k = jwt.verify(req.cookies.sessionToken, provisorio)
         let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1 AND token=?', [JSON.stringify(k.id), req.params.token])
+        if (a[0][0].tipo === 'DM') {
+            // retorna o nome do outro usuario ai pra colocar no display
+        }
         if (a[0].length === 0) {
             return res.status(403).send('Usuário não participa do chat ou o chat não existe.')
         } else {
-            return res.send('autorizado!')
+            return res.send()
         }
     } catch(err) {
         console.log(err)
