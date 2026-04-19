@@ -37,7 +37,13 @@ async function e() {
                     let conn = await con
                     let a = await conn.query('SELECT * FROM usuarios WHERE id=? AND email=?', [k.id, k.email])
                     if (a[0].length === 0) {
-                        return res.status(404).send('Usuário inexistente.')
+                        res.cookie('sessionToken', 'a', {
+                        expires: true,
+                        maxAge: 1,
+                        httpOnly: true,
+                        sameSite: 'strict'
+                        })
+                        return res.status(404).sendFile(path.join(__dirname, 'public', 'redirect.js'))
                     }
                     return next()
                 } catch(err) {
@@ -65,7 +71,7 @@ async function e() {
         default:
             return next()
      }
-     return res.status(401).send('Não autorizado.')
+     return res.status(401).sendFile(path.join(__dirname, 'public', 'redirect.js'))
 })
 
 app.get('/perfil/:id', (req, res) => {
