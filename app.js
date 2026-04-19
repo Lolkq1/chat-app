@@ -43,7 +43,7 @@ async function e() {
                         httpOnly: true,
                         sameSite: 'strict'
                         })
-                        return res.status(404).sendFile(path.join(__dirname, 'public', 'redirect.js'))
+                        return res.status(404).sendFile(path.join(__dirname, 'public', 'oi.html'))
                     }
                     return next()
                 } catch(err) {
@@ -71,7 +71,7 @@ async function e() {
         default:
             return next()
      }
-     return res.status(401).sendFile(path.join(__dirname, 'public', 'redirect.js'))
+     return res.status(401).sendFile(path.join(__dirname, 'public', 'oi.html'))
 })
 
 app.get('/perfil/:id', (req, res) => {
