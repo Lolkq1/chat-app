@@ -95,7 +95,7 @@
             method: 'PATCH'
         }).then(res => {
             if (res.ok) {
-                res.text().then(obj => {JSON.parse(obj)}).then(obj2 => {socket.emit('novo', obj2)})
+                res.text().then(obj => JSON.parse(obj)).then(obj2 => socket.emit('novo', obj2))
             } else {
                 alert('erro: socket')
                 document.location.href = '/'
@@ -108,9 +108,10 @@
         const quem = document.querySelector("#quem")
         fetch(`/chats2/${b}`).then(res => {
             if (res.ok) {
+                let a = 0
                 fetch(`/historico/${b}`).then(res => {
                     if (res.ok) {
-                        res.text().then(res2 => JSON.parse(res2)).then(obj => {
+                        res.text().then(res2 => JSON.parse(res2)).then(obj => {                    
                                 for (x of obj) {
                                 if(x.eu === true) {
                                     let a3 = document.createElement("img")
@@ -129,6 +130,8 @@
                                     c3.appendChild(a3)
                                     c3.appendChild(e)
                                     d.appendChild(c3)
+                                    d.scroll({top:a+100})
+                                    a+=100
                                 } else {
                                     let a3 = document.createElement("img")
                                     let b3 = document.createElement("p")
@@ -145,6 +148,8 @@
                                     c3.appendChild(a3)
                                     c3.appendChild(e)
                                     d.appendChild(c3)
+                                    d.scroll({top:a+100})
+                                    a+=100
                                 }
                                 
                             }
@@ -167,6 +172,8 @@
                             res.text().then(text => 
                                     JSON.parse(text)).then(obj => {
                                         console.log(obj)
+                                        socket.emit('mensagem', {msg: txt.value, room: b, emissor: obj.sessao})
+                                        txt.value = ''
                                         let a3 = document.createElement("img")
                                         let b3 = document.createElement("p")
                                         let c3 = document.createElement("div")
@@ -183,18 +190,59 @@
                                         c3.appendChild(a3)
                                         c3.appendChild(e)
                                         d.appendChild(c3)
+                                        d.scroll({top:a+100})
+                                        a+=100
                                     })
-                                    
-                            
-                            
                         } else {
                             alert('nao foi possível enviar a mensagem.')
                         }
                     })
                     }
                 })
-                socket.on('mensagem', async (mensagem) => {
-                        console.log('t')
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        if (txt.value && txt.value.length > 0) {
+                        fetch(`/mensagem/${b}`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            chat_token: b,
+                            msg: txt.value
+                        }),
+                        headers: {"content-type": "application/json"}
+                    }).then(res => {
+                        if (res.ok) {
+                            res.text().then(text => 
+                                    JSON.parse(text)).then(obj => {
+                                        console.log(obj)
+                                        socket.emit('mensagem', {msg: txt.value, room: b, emissor: obj.sessao})
+                                        txt.value = ''
+                                        let a3 = document.createElement("img")
+                                        let b3 = document.createElement("p")
+                                        let c3 = document.createElement("div")
+                                        let e = document.createElement("div")
+                                        let d = document.querySelector('#token')
+                                        e.className = 'px-5 py-1 w-100'
+                                        e.style = 'text-align: right;'
+                                        e.appendChild(b3)
+                                        c3.className = 'm-2'
+                                        a3.style = 'height: 40px; width: 40px; display: inline; border-radius: 100%; position: relative; left: 100%; transform:translate(-100%,0);'
+                                        a3.src = '/chat/public/pfp.png'
+                                        b3.textContent = obj.msg
+                                        b3.style.display = 'inline'
+                                        c3.appendChild(a3)
+                                        c3.appendChild(e)
+                                        d.appendChild(c3)
+                                        d.scroll({top:a+100})
+                                        a+=100
+                                    })
+                        } else {
+                            alert('nao foi possível enviar a mensagem.')
+                        }
+                    })
+                    }
+                    }
+                })
+                socket.on('mensagem', (mensagem) => {
                         if (!mensagem.emissor) {
                             return alert('emissao inválida de mensagem.')
                         } else {
@@ -203,7 +251,6 @@
                             }
                         })
                     }
-
                     if (mensagem.room === b) {
                         // processo de carregamento visual da msg
                                 let a3 = document.createElement("img")
@@ -221,6 +268,8 @@
                                 c3.appendChild(a3)
                                 c3.appendChild(e)
                                 d.appendChild(c3)
+                                d.scroll({top:a+100})
+                                a+=100
                     } else {
                         // processo de carregar notificaçao da msg visualmente.
                         let a2 = document.querySelector(`#${b}_not`)
@@ -228,7 +277,7 @@
                             a.textContent = parseInt(a.textContent)++
                         } else {
                             let a = document.createElement('span')
-                        a.style = 'width:20px; height:20px; position:absolute; left:100%; transform: translate(-100%); background-color: red; border-radius: 100%; font-size: 20px;'
+                        a.style = 'width:20px; height:20px; position:absolute; left:100%; transform: translate(-100%); background-color: red; border-radius: 100%; font-size: 20px; color: white;'
                         a.textContent = 1
                         a.id = `${b}_not`
                         }

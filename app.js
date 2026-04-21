@@ -191,7 +191,6 @@ app.post('/mensagem/:token', async (req, res) => {
                 let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) AS t FROM chats WHERE token=?', [JSON.stringify(k.id), req.params.token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
                 if (a[0][0].t === 1) {
                     await conn.commit()
-                    await io.to(req.params.token).emit('mensagem', {msg: req.body.msg, room: req.params.token, emissor: req.cookies.sessionToken})
                     return res.send(JSON.stringify({msg: req.body.msg, sessao: req.cookies.sessionToken}))       
                 } else {
                     await conn.rollback()  
@@ -213,7 +212,6 @@ app.get('/chats', async (req, res) => {
         for (x of a[0]) {
             console.log('oi')
             if (x.tipo === 'DM') {
-                console.log('the t')
                 let f = async (x, n) => {
                     let c = await conn.query('SELECT nome FROM usuarios WHERE id=?', [x.participantes[n]])
                     console.log(c[0][0].nome)
@@ -275,6 +273,10 @@ app.get('/chat/public/:id', (req, res) => {
 io.on('connection', async (socket) => {
     socket.on('novo', (salas) => {
         socket.join(salas)
+        console.log(socket.rooms)
+    })
+    socket.on('mensagem', (mensagem) => {
+        socket.broadcast.to(mensagem.room).emit('mensagem', {msg: mensagem.msg, room: mensagem.room, emissor: mensagem.emissor})
     })
 })
 
@@ -286,7 +288,11 @@ app.patch('/socket', async (req, res) => {
         console.log(1)
         let a = await conn.query('SELECT token FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1', [JSON.stringify(k.id)])
         console.log(a[0])
-        return res.send(JSON.stringify(a[0])) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
+        let b = []
+        for (x of a[0]) {
+            b.push(x.token)
+        }
+        return res.send(JSON.stringify(b)) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
     } catch(err) {
         console.log(err)
          return res.status(500).send('erro interno do servidor.')   
@@ -324,7 +330,7 @@ app.get('/verificacao_ec2', async (req, res) => {
     } else {
         try {
             let b = jwt.verify(req.query.emissor, provisorio)
-            let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1 AND token=?', [b.id, req.query.room])
+            let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1 AND token=?', [JSON.stringify(b.id), req.query.room])
             if (a[0].length === 0 ) {
                 return res.status(403).send('não autorizado.')
             } else {
@@ -394,3 +400,5 @@ server.listen(8080, () => {
 }
 
 e()
+
+//corrigir tempo real pq as msg nao tao chegando em tempo real p cada lado
