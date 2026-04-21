@@ -191,7 +191,8 @@ app.post('/mensagem/:token', async (req, res) => {
                 let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) AS t FROM chats WHERE token=?', [JSON.stringify(k.id), req.params.token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
                 if (a[0][0].t === 1) {
                     await conn.commit()
-                    return res.send(req.body.msg)       
+                    await io.to(req.params.token).emit('mensagem', {msg: req.body.msg, room: req.params.token, emissor: req.cookies.sessionToken})
+                    return res.send(JSON.stringify({msg: req.body.msg, sessao: req.cookies.sessionToken}))       
                 } else {
                     await conn.rollback()  
                     return res.status(403).send('Não autorizado.')
@@ -272,10 +273,6 @@ app.get('/chat/public/:id', (req, res) => {
 })
 
 io.on('connection', async (socket) => {
-    socket.on('mensagem', (mensagem) => {
-        //receber .msg e .room onde .room é o token
-        io.to(mensagem.room).emit('mensagem', mensagem.msg)
-    })
     socket.on('novo', (salas) => {
         socket.join(salas)
     })
@@ -288,7 +285,8 @@ app.patch('/socket', async (req, res) => {
         await conn.query('UPDATE sessoes_socket SET token=? WHERE id=?', [req.cookies.io, k.id])
         console.log(1)
         let a = await conn.query('SELECT token FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1', [JSON.stringify(k.id)])
-        return res.send(a[0]) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
+        console.log(a[0])
+        return res.send(JSON.stringify(a[0])) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
     } catch(err) {
         console.log(err)
          return res.status(500).send('erro interno do servidor.')   
@@ -316,6 +314,28 @@ app.get('/verificacao_ec', async (req, res) => {
     } catch(err) {
         console.log(err)
         return res.status(500).send('erro')
+    }
+})
+
+app.get('/verificacao_ec2', async (req, res) => {
+    let conn = await con
+    if (!req.query.emissor || !req.query.room) {
+        return res.status(403).send('não autorizado.')
+    } else {
+        try {
+            let b = jwt.verify(req.query.emissor, provisorio)
+            let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1 AND token=?', [b.id, req.query.room])
+            if (a[0].length === 0 ) {
+                return res.status(403).send('não autorizado.')
+            } else {
+                return res.send('autorizado!')
+            }
+        } catch(err) {
+            console.log(err)
+            return res.status(500).send('erro interno do servidor.') // na vdd em tese o erro vai ser do jwt.verify apenas e nao do servidor mas vai que da erro
+            // no servidor tlg ai pra prevenir deixa assim.
+        }
+        
     }
 })
 
