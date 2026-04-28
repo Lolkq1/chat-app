@@ -15,7 +15,7 @@ const jwt = require('jsonwebtoken')
 const nanoid = require('nanoid')
 let provisorio = 'mcqueenversustheflashquemganha'
 
-// CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL);
+// CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL, bio TEXT);
 // CREATE TABLE chats (token VARCHAR(64) PRIMARY KEY, participantes JSON NOT NULL, tipo VARCHAR(5) NOT NULL)
 // CREATE TABLE mensagens (chat_token VARCHAR(21) NOT NULL, msg TEXT NOT NULL, remetente BIGINT NOT NULL, hora DATETIME NOT NULL, FOREIGN KEY (chat_token) REFERENCES chats(token));
 // CREATE TABLE sessoes_socket (token VARCHAR(20), id BIGINT, FOREIGN KEY (id) REFERENCES usuarios(id))
