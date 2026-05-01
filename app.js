@@ -13,7 +13,7 @@ const bcrypt = require('bcrypt')
 const cookie_parser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 const nanoid = require('nanoid')
-let provisorio = 'mcqueenversustheflashquemganha'
+
 
 // CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL, bio TEXT);
 // CREATE TABLE chats (token VARCHAR(64) PRIMARY KEY, participantes JSON NOT NULL, tipo VARCHAR(5) NOT NULL)
@@ -36,7 +36,7 @@ async function e() {
             if (req.cookies.sessionToken) {
                 console.log('tem sessiontoken')
                 try {
-                    let k = jwt.verify(req.cookies.sessionToken, provisorio)
+                    let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
                     let conn = await con
                     let a = await conn.query('SELECT * FROM usuarios WHERE id=? AND email=?', [k.id, k.email])
                     if (a[0].length === 0) {
@@ -109,7 +109,7 @@ app.post('/criar', async (req, res) => {
             res.cookie('sessionToken', jwt.sign({
                 id: a[0].insertId,
                 email: email
-            }, provisorio), {
+            }, process.env.chave), {
                 maxAge:1000*60*60*24,
                 httpOnly: true,
                 sameSite: "strict"
@@ -138,7 +138,7 @@ app.post('/login', async (req, res) => {
                 res.cookie('sessionToken', jwt.sign({
                 id: a[0][0].id,
                 email: email
-            }, provisorio), {
+            }, process.env.chave), {
                 maxAge:1000*60*60*24,
                 httpOnly: true,
                 sameSite: "strict"
@@ -158,7 +158,7 @@ app.put('/newchat/:id', async (req, res) => {
         let conn = await con
     try {
         // verificar de novo pq vai que so fez a request sem passar pela 1° verificaçao (se ja existe essa dm)
-        let k = jwt.verify(req.cookies.sessionToken, provisorio)
+        let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
         if (k.id == req.params.id) {
             return res.status(400).send('não é possível criar um chat consigo mesmo.')
         }
@@ -186,12 +186,12 @@ app.post('/mensagem/:token', async (req, res) => {
     console.log(req.params.token)
     console.log('ola')
     let e=false
-    let k = jwt.verify(req.cookies.sessionToken, provisorio)
+    let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
             try {
                 e=true
                 await conn.beginTransaction()
-                await conn.query('INSERT INTO mensagens (chat_token, msg, remetente, hora) VALUES (?,?,?, NOW())', [req.params.token, req.body.msg, k.id]) // chat_token é varchar e msg é text
                 let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) AS t FROM chats WHERE token=?', [JSON.stringify(k.id), req.params.token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
+                await conn.query('INSERT INTO mensagens (chat_token, msg, remetente, hora) VALUES (?,?,?, NOW())', [req.params.token, req.body.msg, k.id]) // chat_token é varchar e msg é text
                 if (a[0][0].t === 1) {
                     await conn.commit()
                     return res.send(JSON.stringify({msg: req.body.msg, sessao: req.cookies.sessionToken}))       
@@ -209,7 +209,7 @@ app.post('/mensagem/:token', async (req, res) => {
 app.get('/chats', async (req, res) => {
     try {
         console.log('iae')
-        let k = jwt.verify(req.cookies.sessionToken, provisorio)
+        let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
         let conn = await con
         let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1", [JSON.stringify(k.id)])
         for (x of a[0]) {
@@ -247,7 +247,7 @@ app.get('/newchat/:id', async (req, res) => {
 app.get('/chats2/:token', async (req, res) => {
     try {
         let conn = await con
-        let k = jwt.verify(req.cookies.sessionToken, provisorio)
+        let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
         let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1 AND token=?', [JSON.stringify(k.id), req.params.token])
         if (a[0][0].tipo === 'DM') {
             // retorna o nome do outro usuario ai pra colocar no display
@@ -285,7 +285,7 @@ io.on('connection', async (socket) => {
 
 app.patch('/socket', async (req, res) => {
     try {
-        let k = jwt.verify(req.cookies.sessionToken, provisorio)
+        let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
         let conn = await con
         await conn.query('UPDATE sessoes_socket SET token=? WHERE id=?', [req.cookies.io, k.id])
         console.log(1)
@@ -313,7 +313,7 @@ app.get('/verificacao_ec', async (req, res) => {
         if (Number.isNaN(b)) {
             return res.status(500).send('erro interno.')
         }
-        let k = jwt.verify(req.cookies.sessionToken, provisorio)
+        let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
         let a =await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes, ?) AND tipo="DM"', [JSON.stringify(parseInt(k.id)), JSON.stringify(parseInt(b))])
         if (a[0].length === 0) {
             return res.status(403).send('Não autorizado.')
@@ -332,7 +332,7 @@ app.get('/verificacao_ec2', async (req, res) => {
         return res.status(403).send('não autorizado.')
     } else {
         try {
-            let b = jwt.verify(req.query.emissor, provisorio)
+            let b = jwt.verify(req.query.emissor, process.env.chave)
             let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1 AND token=?', [JSON.stringify(b.id), req.query.room])
             if (a[0].length === 0 ) {
                 return res.status(403).send('não autorizado.')
@@ -382,7 +382,7 @@ app.get('/pesquisa', async (req, res) => {
 
 app.get('/historico/:token', async(req, res) => {
     let conn = await con
-    let k = jwt.verify(req.cookies.sessionToken, provisorio)
+    let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
     let c = await conn.query('SELECT msg, remetente, hora FROM mensagens WHERE chat_token=? ORDER BY hora', [req.params.token])
     console.log(c[0])
     for (x of c[0]) {
@@ -404,4 +404,3 @@ server.listen(8080, () => {
 
 e()
 
-//corrigir tempo real pq as msg nao tao chegando em tempo real p cada lado
