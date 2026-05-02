@@ -4,7 +4,7 @@ const emailinp = document.querySelector("#email")
 const senhainp = document.querySelector("#senha")
 
 btn.addEventListener('click', () => {
-    fetch('/criar', {
+    fetch('/login/criar', {
         method: 'POST',
         body: JSON.stringify({
             nome: nomeinp.value,

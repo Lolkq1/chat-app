@@ -43,13 +43,15 @@
         })
 
             btn.addEventListener('click', () => {
-                fetch(`/verificacao_ec?id=${id}`).then(res => {
+                fetch(`/chats/verificacao_ec?id=${id}`).then(res => {
                     if (res.ok) {
                         console.log('eae2')
                         res.text().then(obj => document.location.href = `/chat/${obj}`)
-                    } else {
+                    } else if(res.status === 403) {
                         console.log('eae')
                         document.location.href = `/newchat/${id}`
+                    } else {
+                        alert('não foi possível iniciar nova conversa.')
                     }
                 })
             })

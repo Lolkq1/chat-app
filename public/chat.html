@@ -91,7 +91,7 @@
             }
         })
         const socket = io()
-        fetch('/socket', {
+        fetch('/chats/socket', {
             method: 'PATCH'
         }).then(res => {
             if (res.ok) {
@@ -106,10 +106,11 @@
         const btn = document.querySelector("#btn_send")
         const txt = document.querySelector("#txt")
         const quem = document.querySelector("#quem")
-        fetch(`/chats2/${b}`).then(res => {
+        fetch(`/chats/chats2/${b}`).then(res => {
             if (res.ok) {
                 let a = 0
-                fetch(`/historico/${b}`).then(res => {
+                console.log(b)
+                fetch(`/chats/historico/${b}`).then(res => {
                     if (res.ok) {
                         res.text().then(res2 => JSON.parse(res2)).then(obj => {                    
                                 for (x of obj) {
@@ -160,7 +161,7 @@
                 })
                 btn.addEventListener("click", () => {
                     if (txt.value && txt.value.length > 0) {
-                        fetch(`/mensagem/${b}`, {
+                        fetch(`/chats/mensagem/${b}`, {
                         method: 'POST',
                         body: JSON.stringify({
                             chat_token: b,
@@ -172,6 +173,9 @@
                             res.text().then(text => 
                                     JSON.parse(text)).then(obj => {
                                         console.log(obj)
+                                        console.log(txt.value, 'valortexto')
+                                        console.log('sala', b)
+                                        console.log(obj.sessao)
                                         socket.emit('mensagem', {msg: txt.value, room: b, emissor: obj.sessao})
                                         txt.value = ''
                                         let a3 = document.createElement("img")
@@ -202,7 +206,7 @@
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         if (txt.value && txt.value.length > 0) {
-                        fetch(`/mensagem/${b}`, {
+                        fetch(`/chats/mensagem/${b}`, {
                         method: 'POST',
                         body: JSON.stringify({
                             chat_token: b,
@@ -246,7 +250,7 @@
                         if (!mensagem.emissor) {
                             return alert('emissao inválida de mensagem.')
                         } else {
-                            let a = fetch(`/verificacao_ec2?emissor=${mensagem.emissor}&room=${mensagem.room}`).then(res => {if (!res.ok) {
+                            let a = fetch(`/chats/verificacao_ec2?emissor=${mensagem.emissor}&room=${mensagem.room}`).then(res => {if (!res.ok) {
                                 return alert(res.statusText)
                             }
                         })

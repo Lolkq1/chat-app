@@ -5,7 +5,7 @@ let b2 = document.location.toString().slice(a+9)
 btn_enviar.addEventListener('click', () => {
     const txt = document.querySelector("#txt")
     if (txt.value && txt.value.length > 0) {
-        fetch(b, {
+        fetch('/chats'+b, {
             method: 'PUT'
         }).then(res => {
             if (res.ok) {
