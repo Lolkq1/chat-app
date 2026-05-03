@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken')
 const cookie_parser = require('cookie-parser')
 const router_chat = require('./routers/chat')
 const router_login = require('./routers/login')
+const router_config = require('./routers/config')
 const con = require('./database')
 // CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL, bio TEXT);
 // CREATE TABLE chats (token VARCHAR(64) PRIMARY KEY, participantes JSON NOT NULL, tipo VARCHAR(5) NOT NULL)
@@ -79,6 +80,8 @@ async function e() {
     app.use('/criar', router_login)
     app.use('/login', router_login)
 
+    app.use('/config', router_config)
+
     app.get('/perfil/:id', (req, res) => {
     return res.sendFile(path.join(__dirname, 'public', 'perfil.html'))
     })
@@ -120,11 +123,11 @@ io.on('connection', async (socket) => {
 
 
 app.get('/pesquisa', async (req, res) => {
+    let conn = await con
     switch (req.query.chave) {
         case 'id':
             try {
-                let conn = await con
-                let a = await conn.query('SELECT nome, bio FROM usuarios WHERE id=?', [req.query.id])
+                let a = await conn.query('SELECT nome, bio, email FROM usuarios WHERE id=?', [req.query.id])
                 console.log(a)
                 if (a[0].length === 0) {
                     return res.status(404).send('usuario nao encontrado.')
@@ -137,7 +140,6 @@ app.get('/pesquisa', async (req, res) => {
             }
         case 'nome':
             try {
-                let conn = await con
                 console.log(req.query.nome)
                 console.log(req.query)
                 let a = await conn.query('SELECT nome, id FROM usuarios WHERE nome LIKE ?', [req.query.nome])
@@ -147,7 +149,15 @@ app.get('/pesquisa', async (req, res) => {
                 console.log(err)
                 return res.status(500).send('erro interno do servidor.')
             }
-            
+        case 'dados':
+            try {
+                let i = await jwt.verify(req.cookies.sessionToken, process.env.chave)
+                let a = await conn.query('SELECT nome,bio,email FROM usuarios WHERE id=?', [i.id])
+                return res.send(JSON.stringify(a[0][0]))
+            } catch(err) {
+                console.log(err)
+                return res.status(500).send('erro intenro do servidor.')
+            }
     }
 })
 

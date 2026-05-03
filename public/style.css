@@ -28,3 +28,7 @@ body {
     overflow-y: scroll;
     overflow-wrap: break-word;
 }
+
+#config_div {
+    display: none;
+}

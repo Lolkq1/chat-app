@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
 async function criar (req, res) {
-    
+    let conn = await con
     const {nome, email, senha} = req.body
     if (nome.length > 30 || nome.length === 0 || email.indexOf("@") === -1 || email.indexOf(".") === -1) {
         return res.status(400).send('nome de usuário ou e-mail inválidos.')

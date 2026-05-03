@@ -10,7 +10,7 @@ btn_enviar.addEventListener('click', () => {
         }).then(res => {
             if (res.ok) {
                 res.text().then(obj => {
-                    fetch(`/mensagem/${obj}`, {
+                    fetch(`/chats/mensagem/${obj}`, {
                         method: 'POST',
                         body: JSON.stringify({
                             msg: txt.value
