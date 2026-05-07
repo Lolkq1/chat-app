@@ -14,6 +14,7 @@ const router_chat = require('./routers/chat')
 const router_login = require('./routers/login')
 const router_config = require('./routers/config')
 const con = require('./database')
+const auth = require('./auth')
 // CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL, bio TEXT);
 // CREATE TABLE chats (token VARCHAR(64) PRIMARY KEY, participantes JSON NOT NULL, tipo VARCHAR(5) NOT NULL)
 // CREATE TABLE mensagens (chat_token VARCHAR(21) NOT NULL, msg TEXT NOT NULL, remetente BIGINT NOT NULL, hora DATETIME NOT NULL, FOREIGN KEY (chat_token) REFERENCES chats(token));
@@ -28,6 +29,9 @@ async function e() {
      switch (req.url) {
         case '/index.html':
         case '/':
+        case '/chat.html':
+        case '/configuracoes.html':
+        case '/newchat.html':
             if (req.cookies.sessionToken) {
                 console.log('tem sessiontoken')
                 try {
@@ -75,12 +79,13 @@ async function e() {
 
     console.log('teste')
 
-    app.use('/chats', router_chat)
+
+    app.use('/chats', auth, router_chat)
 
     app.use('/criar', router_login)
     app.use('/login', router_login)
 
-    app.use('/config', router_config)
+    app.use('/config', auth, router_config)
 
     app.get('/perfil/:id', (req, res) => {
     return res.sendFile(path.join(__dirname, 'public', 'perfil.html'))

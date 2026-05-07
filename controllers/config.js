@@ -24,7 +24,7 @@ async function padrao(propriedade, req, res) {
         let m3 = await bcrypt.compare(senha, m2[0][0].senha)
         if (!m3) {
             console.log('senha incorreta.')
-            return res.status(422).send('não autorizado.')
+            return res.status(401).send('não autorizado.')
         }
         if (propriedade === 'senha') {
             let a = await bcrypt.hash(prop, 10)
