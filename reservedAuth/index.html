@@ -23,7 +23,7 @@
         </div>
         <div class="navbar w-25" style="top: 50%; transform: translate(0,-50%); position: relative;">
             <div class="nav-item">
-                <a href="configuracoes.html" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: white;">
+                <a href="configuracoes" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: white;">
                     configuracoes
                 </a>
             </div>
@@ -35,12 +35,12 @@
         </div>
     <div class="container col-9 m-0" id="pesquisa">
         <div id="main" class="h-100">
-            <div class="row mx-0 w-100" id="barra_pesquisa">
+            <form method="post" class="row mx-0 w-100" id="barra_pesquisa">
                 <input type="text" class="form-control w-75" id="pesquisa_txt">
                 <button class="btn btn-secondary" id="pesquisar">
                     <img width="20px" height="20px" src="pesquisar.png" alt="">
                 </button>
-            </div>
+            </form>
             <div class="row h-100 d-flex p-2" id="display_pesquisa">
                 <!-- <div class="card m-2" style="width: 300px; height: 125px; border: 1px solid black; border-radius: 5px; cursor: pointer;">
                     <div class="card-body">
@@ -77,46 +77,7 @@
         const chatsdiv = document.querySelector("#chat")
         const pesquisadiv = document.querySelector("#main")
         const displaypesquisa = document.querySelector("#display_pesquisa")
-        const msg_div = document.querySelector("#msg")
-        // async function e() {
-        //     try {
-        //         const chats = await fetch('/chats')
-        //         for (x in chats) {
-        //                 const card = document.createElement('div')
-        //                 card.className = 'card'
-        //                 card.style = 'width: 100%; height: 70px;'
-        //                 const cbody = document.createElement('div')
-        //                 cbody.className = 'card-body p-0'
-        //                 cbody.style = 'width: 100%; height: 100%;'
-        //                 const img = document.createElement('img')
-        //                 img.src = 'pfp.png'
-        //                 img.style = 'width: 40px; height: 40px; border-radius: 100%; box-shadow: 0 0 2px; display: inline;'
-        //                 img.className = 'card-image m-3'
-        //                 const p = document.createElement('p')
-        //                 p.className = 'card-text'
-        //                 p.style = 'display: inline;'
-        //                 p.textContent = chats[x].nome
-        //                 tokens.push(chats[x].token)
-        //                 card.id = chats[x].token
-        //                 card.addEventListener('click', () => {
-        //                     pesquisadiv.style.display = 'none'
-        //                     if (loadedChats.includes(tokens[x])) {
-        //                         for (y of chatsdiv) {
-        //                             if (y.id === tokens[x]) {
-        //                                 y.style.display = "block"
-        //                             } else if (y.id !== "msg") {
-        //                                 y.style.display = "none"
-        //                             }
-        //                         }
-        //                     } else {
-        //                         // processo de criaçao e carregamento das mensagens aqui
-        //                         
-        //                     }
-        //                 })
-        //         }
-        //     } catch {
-        //     }
-        // } 
+        const msg_div = document.querySelector("#msg") 
 
         const chats = document.querySelector("#sidebar")
         fetch('/chats').then(res => res.text()).then(res2 => JSON.parse(res2)).then(obj => {
@@ -136,7 +97,7 @@
                 cbody.className = 'card-body p-0'
                 cbody.style = 'width:100%; height: 100%;'
                 let img = document.createElement('img')
-                img.src = 'pfp.png'
+                img.src = '/pfp.png'
                 img.className = 'card-image m-3'
                 img.style = 'width: 40px; height: 40px; border-radius: 100%; box-shadow: 0 0 2px; display: inline;'
                 cbody.appendChild(img)
@@ -150,7 +111,8 @@
             }
         })
         const btn_pesquisa = document.querySelector("#pesquisar")
-        btn_pesquisa.addEventListener('click', ()=>{
+        btn_pesquisa.addEventListener('click', (e)=>{
+            e.preventDefault()
             const pesquisa_txt = document.querySelector("#pesquisa_txt")
             console.log(pesquisa_txt.value)
             fetch(`/pesquisa?chave=nome&nome=${pesquisa_txt.value}`).then(res => {

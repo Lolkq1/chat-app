@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken')
 const path = require('path')
 
 
-let a = async (req, res, next) => {
+let auth = async (req, res, next) => {
     const conn = await con
     if (req.cookies.sessionToken) {
                 console.log('tem sessiontoken')
@@ -19,7 +19,7 @@ let a = async (req, res, next) => {
                             httpOnly: true,
                             sameSite: 'strict'
                         })
-                        return res.status(404).sendFile(path.join(__dirname, 'public', 'oi.html'))
+                        return res.status(404).sendFile(path.join(__dirname, 'public', 'redirectLogin.html'))
                     }
                     res.locals.k = {
                         id: k.id,
@@ -33,12 +33,29 @@ let a = async (req, res, next) => {
                         httpOnly: true,
                         sameSite: "strict"
                     })
-                    return res.status(401).sendFile(path.join(__dirname, 'public', 'oi.html'))
+                    return res.status(401).sendFile(path.join(__dirname, 'public', 'redirectLogin.html'))
                 }
     }
-    return res.status(401).sendFile(path.join(__dirname, 'public', 'oi.html'))
+    return res.status(401).sendFile(path.join(__dirname, 'public', 'redirectLogin.html'))
 }
 
+let inverseAuth = async (req, res, next) => {
+    let conn = await con
+    if (!req.cookies.sessionToken) return next()
+    try {
+        let a = jwt.verify(req.cookies.sessionToken, process.env.chave)
+        let b = await conn.query("SELECT * FROM usuarios WHERE id=?", [a.id])
+        if (b[0][0].length === 0) {
+            throw new Error;
+        }
+        return res.status(403).sendFile(path.join(__dirname, 'public', 'redirectHomepage.html'))
+    } catch (error) {
+        res.clearCookie("sessionToken", {httpOnly: true, sameSite: "strict"})
+        return res.status(401).send('Credenciais inválidas.')
+    }
+} 
 
 
-module.exports = a
+module.exports = {
+    auth, inverseAuth
+}

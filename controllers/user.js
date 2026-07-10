@@ -117,9 +117,14 @@ async function mudar(req, res) {
     padrao(req.params.config, req, res)
 }
 
+async function logout(req, res) {
+    res.clearCookie("sessionToken", {httpOnly: true, sameSite: "strict"})
+    return res.send("Logout feito com sucesso!")
+}
 
 module.exports = {
     criar, 
     login, 
-    mudar
+    mudar,
+    logout
 }

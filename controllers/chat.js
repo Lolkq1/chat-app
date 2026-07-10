@@ -39,7 +39,7 @@ async function postMensagem(req, res) {
                 await conn.query('INSERT INTO mensagens (chat_token, msg, remetente, hora) VALUES (?,?,?, NOW())', [req.params.token, req.body.msg, id]) // chat_token é varchar e msg é text
                 if (a[0][0].t === 1) {
                     await conn.commit()
-                    return res.send(JSON.stringify({msg: req.body.msg, sessao: req.cookies.sessionToken}))       
+                    return res.json({msg: req.body.msg, sessao: req.cookies.sessionToken})       
                 }
                 throw new Error("not authorized")
             } catch(err) {
@@ -66,14 +66,11 @@ async function chats(req, res) {
                 switch (x.participantes[0] === id) {
                     case true:
                         await f(x, 1)
-                        console.log('nsei')
                         break;
                     case false:
                         await f(x,0)
-                        console.log('thau')
                         break;
                 }
-                // piores linhas de codigos que eu ja fiz na vida refatorar dps
             }
         }
         return res.send(a[0])
@@ -93,9 +90,8 @@ async function chats2(req, res) {
         }
         if (a[0].length === 0) {
             return res.status(403).send('Usuário não participa do chat ou o chat não existe.')
-        } else {
-            return res.send()
         }
+            return res.send()
     } catch(err) {
         console.log(err)
         return res.status(500).send('erro intenro do servidor')
@@ -116,9 +112,9 @@ async function verificacao_ec(req, res) {
         let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes, ?) AND tipo="DM"', [JSON.stringify(parseInt(id)), JSON.stringify(parseInt(b))])
         if (a[0].length === 0) {
             return res.status(403).send('Não autorizado.')
-        } else {
-            return res.send(a[0][0].token)
         }
+
+        return res.send(a[0][0].token)
     } catch(err) {
         console.log(err)
         return res.status(500).send('erro')
@@ -160,7 +156,7 @@ async function historico(req, res) {
         }
     }
     console.log(c[0][0])
-    return res.send(JSON.stringify(c[0]))
+    return res.json(c[0])
 }
 
 async function socket(req, res) {
@@ -175,7 +171,7 @@ async function socket(req, res) {
         for (x of a[0]) {
             b.push(x.token)
         }
-        return res.send(JSON.stringify(b)) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
+        return res.json(b) // o front vai receber um 200 OK e ai vai ja mandar um evento chamado 'novo' e conectar o novo socket a cada uma das salas.
     } catch(err) {
         console.log(err)
          return res.status(500).send('erro interno do servidor.')   

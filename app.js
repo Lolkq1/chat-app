@@ -13,7 +13,7 @@ const cookie_parser = require('cookie-parser')
 const router_chat = require('./routes/chat')
 const router_user = require('./routes/user')
 const con = require('./database')
-const auth = require('./auth')
+const {auth, inverseAuth} = require('./auth')
 // CREATE TABLE usuarios (id BIGINT PRIMARY KEY AUTO_INCREMENT, email VARCHAR(255) UNIQUE NOT NULL, nome VARCHAR(30) NOT NULL, senha VARCHAR(255) NOT NULL, bio TEXT);
 // CREATE TABLE chats (token VARCHAR(64) PRIMARY KEY, participantes JSON NOT NULL, tipo VARCHAR(5) NOT NULL)
 // CREATE TABLE mensagens (chat_token VARCHAR(21) NOT NULL, msg TEXT NOT NULL, remetente BIGINT NOT NULL, hora DATETIME NOT NULL, FOREIGN KEY (chat_token) REFERENCES chats(token));
@@ -24,7 +24,9 @@ app.use(express.json())
 app.use(cookie_parser())
 
 app.use(express.static(path.join(__dirname, 'public')))
-
+app.use('/login', inverseAuth, (req, res) => {return res.sendFile(path.join(__dirname, 'public', 'login.html'))})
+app.use('/signup', inverseAuth, (req, res) => {return res.sendFile(path.join(__dirname, 'public', 'signup.html'))})
+app.use('/configuracoes', auth, (req, res) => {return res.sendFile(path.join(__dirname, 'reservedAuth', 'configuracoes.html'))})
 
 app.use('/chats', auth, router_chat)
 
@@ -34,26 +36,13 @@ app.get('/perfil/:id', (req, res) => {
     return res.sendFile(path.join(__dirname, 'public', 'perfil.html'))
 })
 
-app.get('/perfil/public/:id', (req, res) => {
-    return res.sendFile(path.join(__dirname, 'public', req.params.id))
+app.get('/chat/:token', auth, (req, res) => {
+    return res.sendFile(path.join(__dirname, 'reservedAuth', '/chat.html'))
 })
 
-app.get('/chat/:token', (req, res) => {
-    return res.sendFile(path.join(__dirname, 'private', '/chat.html'))
+app.get('/newchat/:id', auth, async (req, res) => {
+    return res.sendFile(path.join(__dirname, 'reservedAuth', 'newchat.html'))
 })
-
-app.get('/chat/public/:id', (req, res) => {
-    return res.sendFile(path.join(__dirname, 'public', req.params.id))
-})
-
-app.get('/chat/private/:id', (req, res) => {
-    return res.sendFile(path.join(__dirname, 'private', req.params.id))
-})
-
-app.get('/newchat/:id', async (req, res) => {
-    return res.sendFile(path.join(__dirname, 'private', 'newchat.html'))
-})
-
 // so pra lembrar: chats2 pega um chat especifico e verifica se o user ta. chats pega todos os que o user ta. da pra juntar os 2 mas dx pra dps
 
 
@@ -110,7 +99,8 @@ app.get('/pesquisa', async (req, res) => {
     }
 })
 
-app.use(auth, express.static(path.join(__dirname,'private')))
+
+app.use(auth, express.static(path.join(__dirname,'reservedAuth')))
 
 server.listen(8080, () => {
     console.log('servidor rodando na porta 8080')

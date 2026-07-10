@@ -19,7 +19,8 @@ fetch('/pesquisa?chave=dados').then(res => res.text()).then(obj => JSON.parse(ob
 function enejota(b, msg) {
     container.style.display = 'none'
     label_e.textContent = msg;
-    btn_att.addEventListener('click', async () => {
+    btn_att.addEventListener('click', async (k) => {
+        k.preventDefault()
         const senha = document.querySelector("#senha")
         const e = document.querySelector("#e")
         let a = await fetch(`user/config/`+b, {
