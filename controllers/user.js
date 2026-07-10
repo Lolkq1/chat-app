@@ -114,7 +114,7 @@ async function padrao(propriedade, req, res) {
 }
 
 async function mudar(req, res) {
-    padrao(req.params.config, req, res)
+   await padrao(req.params.config, req, res)
 }
 
 async function logout(req, res) {

@@ -1,10 +1,10 @@
 const express = require('express')
 const router = express.Router()
-const {criar, login, mudar, logout} = require('../controllers/user')
+const {criar, login, mudar, logout, pesquisa} = require('../controllers/user')
 const {auth} = require('../auth')
 router.post('/signup', criar)
 router.post('/login', login)
 router.patch('/config/:config', auth, mudar)
 router.post('/logout', auth, logout)
-router.post('/pesquisa', auth, )
+router.post('/pesquisa', auth, pesquisa)
 module.exports = router
