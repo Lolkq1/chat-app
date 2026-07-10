@@ -22,7 +22,7 @@ function enejota(b, msg) {
     btn_att.addEventListener('click', async () => {
         const senha = document.querySelector("#senha")
         const e = document.querySelector("#e")
-        let a = await fetch(`/config/`+b, {
+        let a = await fetch(`user/config/`+b, {
             method: 'PATCH',
             body: JSON.stringify({
                 prop: e.value,

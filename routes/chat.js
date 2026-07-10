@@ -12,7 +12,6 @@ router.post('/mensagem/:token', postMensagem)
 
 router.get('/', chats)
 
-
 router.get('/chats2/:token', chats2)
 
 

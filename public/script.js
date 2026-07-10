@@ -2,8 +2,9 @@ const btn = document.querySelector("#btn")
 const emailinp = document.querySelector("#email")
 const senhainp = document.querySelector("#senha")
 
-btn.addEventListener('click', () => {
-    fetch('/login', {
+btn.addEventListener('click', (e) => {
+    e.preventDefault()
+    fetch('/user/login', {
         method: 'POST',
         body: JSON.stringify({
             email: emailinp.value,

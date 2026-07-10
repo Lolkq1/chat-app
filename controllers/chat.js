@@ -1,4 +1,3 @@
-require('dotenv').config()
 const con = require('../database')
 const jwt = require('jsonwebtoken')
 const nanoid = require('nanoid')
@@ -6,11 +5,11 @@ async function newChat (req, res) {
     try {
         let conn = await con
         // verificar de novo pq vai que so fez a request sem passar pela 1° verificaçao (se ja existe essa dm)
-        let k = await jwt.verify(req.cookies.sessionToken, process.env.chave)
-        if (k.id == req.params.id) {
+        const {id} = res.locals.k
+        if (id == req.params.id) {
             return res.status(400).send('não é possível criar um chat consigo mesmo.')
         }
-        let k2 = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes,?) = 1', [JSON.stringify(k.id), JSON.stringify(parseInt(req.params.id))])
+        let k2 = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes,?) = 1', [JSON.stringify(id), JSON.stringify(parseInt(req.params.id))])
         console.log(k2[0])
         console.log('aq nao 1')
         if (k2[0].length > 0) {
@@ -18,7 +17,7 @@ async function newChat (req, res) {
         }
         await conn.beginTransaction()
         let a = nanoid.nanoid()
-        await conn.query('INSERT INTO chats (token, participantes, tipo) VALUES (?,?,"DM")', [a, JSON.stringify([parseInt(req.params.id), k.id])])
+        await conn.query('INSERT INTO chats (token, participantes, tipo) VALUES (?,?,"DM")', [a, JSON.stringify([parseInt(req.params.id), id])])
         console.log('aq nao 2')
         await conn.commit()
         return res.send(a)
@@ -32,24 +31,20 @@ async function newChat (req, res) {
 async function postMensagem(req, res) {
     console.log(req.params.token)
     console.log('ola')
-    let e=false
             try {
                 let conn = await con
-                let k = await jwt.verify(req.cookies.sessionToken, process.env.chave)
-                e=true
+                const {id} = res.locals.k
                 await conn.beginTransaction()
-                let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) AS t FROM chats WHERE token=?', [JSON.stringify(k.id), req.params.token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
-                await conn.query('INSERT INTO mensagens (chat_token, msg, remetente, hora) VALUES (?,?,?, NOW())', [req.params.token, req.body.msg, k.id]) // chat_token é varchar e msg é text
+                let a = await conn.query('SELECT JSON_CONTAINS(participantes, ?) AS t FROM chats WHERE token=?', [JSON.stringify(id), req.params.token]) // verificacao pra ver se o usuario q fez essa request ta na conversa
+                await conn.query('INSERT INTO mensagens (chat_token, msg, remetente, hora) VALUES (?,?,?, NOW())', [req.params.token, req.body.msg, id]) // chat_token é varchar e msg é text
                 if (a[0][0].t === 1) {
                     await conn.commit()
                     return res.send(JSON.stringify({msg: req.body.msg, sessao: req.cookies.sessionToken}))       
-                } else {
-                    await conn.rollback()  
-                    return res.status(403).send('Não autorizado.')
                 }
+                throw new Error("not authorized")
             } catch(err) {
-                console.log(err)
-                if (e) {return res.status(401).send('Não autorizado.')} else {return res.status(500).send('Erro interno do servidor.')}
+                await conn.rollback()  
+                return res.status(403).send('Não autorizado.')
             }
     
 }
@@ -58,8 +53,8 @@ async function chats(req, res) {
     try {
         let conn = await con
         console.log('iae')
-        let k = await jwt.verify(req.cookies.sessionToken, process.env.chave)
-        let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1", [JSON.stringify(k.id)])
+        const {id} = res.locals.k
+        let a = await conn.query("SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1", [JSON.stringify(id)])
         for (x of a[0]) {
             console.log('oi')
             if (x.tipo === 'DM') {
@@ -68,7 +63,7 @@ async function chats(req, res) {
                     console.log(c[0][0].nome)
                     x.nome = c[0][0].nome 
                 }
-                switch (x.participantes[0] === k.id) {
+                switch (x.participantes[0] === id) {
                     case true:
                         await f(x, 1)
                         console.log('nsei')
@@ -91,8 +86,8 @@ async function chats(req, res) {
 async function chats2(req, res) {
     try {
         let conn = await con
-        let k = await jwt.verify(req.cookies.sessionToken, process.env.chave)
-        let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1 AND token=?', [JSON.stringify(k.id), req.params.token])
+        const {id} = res.locals.k
+        let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(chats.participantes,?) = 1 AND token=?', [JSON.stringify(id), req.params.token])
         if (a[0][0].tipo === 'DM') {
             // retorna o nome do outro usuario ai pra colocar no display
         }
@@ -114,11 +109,11 @@ async function verificacao_ec(req, res) {
         if (Number.isNaN(b)) {
             return res.status(500).send('erro interno.')
         }
-        let k = await jwt.verify(req.cookies.sessionToken, process.env.chave)
-        if (parseInt(k.id) === parseInt(b)) {
+        const {id} = res.locals.k
+        if (parseInt(id) === parseInt(b)) {
             return res.status(422).send('Não autorizado.')
         }
-        let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes, ?) AND tipo="DM"', [JSON.stringify(parseInt(k.id)), JSON.stringify(parseInt(b))])
+        let a = await conn.query('SELECT * FROM chats WHERE JSON_CONTAINS(participantes,?) = 1 AND JSON_CONTAINS(participantes, ?) AND tipo="DM"', [JSON.stringify(parseInt(id)), JSON.stringify(parseInt(b))])
         if (a[0].length === 0) {
             return res.status(403).send('Não autorizado.')
         } else {
@@ -154,11 +149,11 @@ async function verificacao_ec2(req, res){
 
 async function historico(req, res) {
     let conn = await con
-    let k = jwt.verify(req.cookies.sessionToken, process.env.chave)
+    const {id} = res.locals.k
     let c = await conn.query('SELECT msg, remetente, hora FROM mensagens WHERE chat_token=? ORDER BY hora', [req.params.token])
     console.log(c[0])
     for (x of c[0]) {
-        if (x.remetente === k.id) {
+        if (x.remetente === id) {
             x.eu = true
         } else {
             x.eu = false
@@ -170,11 +165,11 @@ async function historico(req, res) {
 
 async function socket(req, res) {
     try {
-        let k = await jwt.verify(req.cookies.sessionToken, process.env.chave)
+        const {id} = res.locals.k
         let conn = await con
-        await conn.query('UPDATE sessoes_socket SET token=? WHERE id=?', [req.cookies.io, k.id])
+        await conn.query('UPDATE sessoes_socket SET token=? WHERE id=?', [req.cookies.io, id])
         console.log(1)
-        let a = await conn.query('SELECT token FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1', [JSON.stringify(k.id)])
+        let a = await conn.query('SELECT token FROM chats WHERE JSON_CONTAINS(participantes, ?) = 1', [JSON.stringify(id)])
         console.log(a[0])
         let b = []
         for (x of a[0]) {
