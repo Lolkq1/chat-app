@@ -3,7 +3,7 @@ const id = window.location.pathname.slice([window.location.pathname.indexOf('id'
 if (Number.isNaN(id)) {
     document.location.href = '/'
 } else {
-    fetch(`/pesquisa?chave=id&id=${id}`).then(res => {
+    fetch(`/user/pesquisa?chave=id&id=${id}`).then(res => {
     if (res.ok) {
         res.text().then(obj2 => JSON.parse(obj2)).then(obj => {
             const nome = document.querySelector("#nome")

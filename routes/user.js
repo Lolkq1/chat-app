@@ -6,5 +6,5 @@ router.post('/signup', criar)
 router.post('/login', login)
 router.patch('/config/:config', auth, mudar)
 router.post('/logout', auth, logout)
-
+router.post('/pesquisa', auth, )
 module.exports = router

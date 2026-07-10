@@ -10,7 +10,7 @@ const nome = document.querySelector("#nome")
 const email = document.querySelector("#email")
 const bio = document.querySelector("#bio")
 
-fetch('/pesquisa?chave=dados').then(res => res.text()).then(obj => JSON.parse(obj)).then(res2 => {
+fetch('/user/pesquisa?chave=dados').then(res => res.text()).then(obj => JSON.parse(obj)).then(res2 => {
         nome.textContent+=res2.nome
         email.textContent+=res2.email
         bio.textContent+=res2.bio

@@ -115,7 +115,7 @@
             e.preventDefault()
             const pesquisa_txt = document.querySelector("#pesquisa_txt")
             console.log(pesquisa_txt.value)
-            fetch(`/pesquisa?chave=nome&nome=${pesquisa_txt.value}`).then(res => {
+            fetch(`/user/pesquisa?chave=nome&nome=${pesquisa_txt.value}`).then(res => {
                 if (res.ok) {
                     res.text().then(obj2 => (JSON.parse(obj2))).then(obj => {
                             console.log(obj)

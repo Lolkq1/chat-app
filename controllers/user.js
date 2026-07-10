@@ -122,9 +122,50 @@ async function logout(req, res) {
     return res.send("Logout feito com sucesso!")
 }
 
+ async function pesquisa (req, res) {
+    let conn = await con
+    switch (req.query.chave) {
+        case 'id':
+            try {
+                let a = await conn.query('SELECT nome, bio, email FROM usuarios WHERE id=?', [req.query.id])
+                console.log(a)
+                if (a[0].length === 0) {
+                    return res.status(404).send('usuario nao encontrado.')
+                }
+                return res.send(JSON.stringify(a[0][0]))
+            }
+            catch(err) {
+                console.log(err)
+                return res.status(500).send('erro interno do servidor.')
+            }
+        case 'nome':
+            try {
+                console.log(req.query.nome)
+                console.log(req.query)
+                let a = await conn.query('SELECT nome, id FROM usuarios WHERE nome LIKE ?', [req.query.nome])
+                console.log(a, a[0])
+                return res.send(JSON.stringify(a[0]))
+            } catch(err) {
+                console.log(err)
+                return res.status(500).send('erro interno do servidor.')
+            }
+        case 'dados':
+            try {
+                let i = await jwt.verify(req.cookies.sessionToken, process.env.chave)
+                let a = await conn.query('SELECT nome,bio,email FROM usuarios WHERE id=?', [i.id])
+                return res.send(JSON.stringify(a[0][0]))
+            } catch(err) {
+                console.log(err)
+                return res.status(500).send('erro intenro do servidor.')
+            }
+    }
+}
+
+
 module.exports = {
     criar, 
     login, 
     mudar,
-    logout
+    logout, 
+    pesquisa
 }

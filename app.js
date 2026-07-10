@@ -24,9 +24,9 @@ app.use(express.json())
 app.use(cookie_parser())
 
 app.use(express.static(path.join(__dirname, 'public')))
-app.use('/login', inverseAuth, (req, res) => {return res.sendFile(path.join(__dirname, 'public', 'login.html'))})
-app.use('/signup', inverseAuth, (req, res) => {return res.sendFile(path.join(__dirname, 'public', 'signup.html'))})
-app.use('/configuracoes', auth, (req, res) => {return res.sendFile(path.join(__dirname, 'reservedAuth', 'configuracoes.html'))})
+app.get('/login', inverseAuth, (req, res) => {return res.sendFile(path.join(__dirname, 'public', 'login.html'))})
+app.get('/signup', inverseAuth, (req, res) => {return res.sendFile(path.join(__dirname, 'public', 'signup.html'))})
+app.get('/configuracoes', auth, (req, res) => {return res.sendFile(path.join(__dirname, 'reservedAuth', 'configuracoes.html'))})
 
 app.use('/chats', auth, router_chat)
 
@@ -37,15 +37,13 @@ app.get('/perfil/:id', (req, res) => {
 })
 
 app.get('/chat/:token', auth, (req, res) => {
-    return res.sendFile(path.join(__dirname, 'reservedAuth', '/chat.html'))
+    return res.sendFile(path.join(__dirname, 'reservedAuth', 'chat.html'))
 })
 
 app.get('/newchat/:id', auth, async (req, res) => {
     return res.sendFile(path.join(__dirname, 'reservedAuth', 'newchat.html'))
 })
 // so pra lembrar: chats2 pega um chat especifico e verifica se o user ta. chats pega todos os que o user ta. da pra juntar os 2 mas dx pra dps
-
-
 
 io.on('connection', async (socket) => {
     socket.on('novo', (salas) => {
@@ -59,46 +57,6 @@ io.on('connection', async (socket) => {
 
 // isso aqui é muito imprático e em larga escala horrivel mas como ainda nao sei react pra fazer SPA (unica soluçao viavel
 // que eu achei pq as outras nao entendi direito) pra n ter que mudar o .io toda hora vai assim por enquanto
-
-app.get('/pesquisa', async (req, res) => {
-    let conn = await con
-    switch (req.query.chave) {
-        case 'id':
-            try {
-                let a = await conn.query('SELECT nome, bio, email FROM usuarios WHERE id=?', [req.query.id])
-                console.log(a)
-                if (a[0].length === 0) {
-                    return res.status(404).send('usuario nao encontrado.')
-                }
-                return res.send(JSON.stringify(a[0][0]))
-            }
-            catch(err) {
-                console.log(err)
-                return res.status(500).send('erro interno do servidor.')
-            }
-        case 'nome':
-            try {
-                console.log(req.query.nome)
-                console.log(req.query)
-                let a = await conn.query('SELECT nome, id FROM usuarios WHERE nome LIKE ?', [req.query.nome])
-                console.log(a, a[0])
-                return res.send(JSON.stringify(a[0]))
-            } catch(err) {
-                console.log(err)
-                return res.status(500).send('erro interno do servidor.')
-            }
-        case 'dados':
-            try {
-                let i = await jwt.verify(req.cookies.sessionToken, process.env.chave)
-                let a = await conn.query('SELECT nome,bio,email FROM usuarios WHERE id=?', [i.id])
-                return res.send(JSON.stringify(a[0][0]))
-            } catch(err) {
-                console.log(err)
-                return res.status(500).send('erro intenro do servidor.')
-            }
-    }
-})
-
 
 app.use(auth, express.static(path.join(__dirname,'reservedAuth')))
 
